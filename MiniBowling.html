@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniBowling</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap');
+
+  :root {
+    --lane-wood: #8B5E3C;
+    --lane-light: #C4874A;
+    --lane-dark: #5A3520;
+    --neon-blue: #00D4FF;
+    --neon-gold: #FFD700;
+    --neon-red: #FF3B3B;
+    --neon-green: #39FF14;
+    --bg-dark: #0D0A08;
+    --score-bg: #12100E;
+    --pin-white: #F0EDE8;
+    --ball-color: #1A1A2E;
+    --ball-shine: #4A4A8A;
+    --gutter-dark: #2A1A0E;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-dark);
+    font-family: 'DM Mono', monospace;
+    color: #E8D5B0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.5;
+  }
+
+  /* ═══════════════ SCOREBOARD ═══════════════ */
+  #scoreboard {
+    width: 100%;
+    max-width: 900px;
+    padding: 10px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .game-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 6px;
+    color: var(--neon-gold);
+    text-shadow: 0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2);
+  }
+
+  .score-frames {
+    display: flex;
+    gap: 2px;
+    background: var(--score-bg);
+    border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 6px;
+    padding: 6px;
+    width: 100%;
+    max-width: 860px;
+  }
+
+  .frame-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .frame-label {
+    font-size: 9px;
+    color: rgba(255,215,0,0.4);
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+
+  .frame-rolls {
+    display: flex;
+    gap: 1px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .roll-cell {
+    width: 20px;
+    height: 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0;
+    color: #C4874A;
+  }
+
+  .roll-cell.strike { color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold); }
+  .roll-cell.spare { color: var(--neon-blue); text-shadow: 0 0 8px var(--neon-blue); }
+
+  .frame-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: #E8D5B0;
+    margin-top: 2px;
+    min-height: 20px;
+  }
+
+  .frame-box.active .frame-rolls {
+    filter: drop-shadow(0 0 6px rgba(0,212,255,0.6));
+  }
+
+  .frame-box.active .roll-cell {
+    border-color: var(--neon-blue);
+  }
+
+  .total-score-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--neon-gold);
+  }
+
+  /* ═══════════════ GAME AREA ═══════════════ */
+  #game-area {
+    flex: 1;
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 12px;
+    padding: 0 16px 10px;
+    align-items: stretch;
+  }
+
+  /* Left: aim info */
+  .side-panel {
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-bottom: 20px;
+  }
+
+  .aim-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(255,215,0,0.5);
+    text-transform: uppercase;
+  }
+
+  .aim-indicator {
+    width: 60px;
+    height: 60px;
+    border: 2px solid rgba(255,215,0,0.3);
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .aim-arrow {
+    width: 2px;
+    height: 24px;
+    background: var(--neon-blue);
+    border-radius: 2px;
+    transform-origin: bottom center;
+    transition: transform 0.1s;
+    box-shadow: 0 0 6px var(--neon-blue);
+  }
+
+  /* Center: canvas */
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  canvas {
+    display: block;
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+
+  /* Right: power meter */
+  .power-panel {
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-bottom: 20px;
+  }
+
+  .power-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(255,215,0,0.5);
+    text-transform: uppercase;
+  }
+
+  .power-meter-wrap {
+    width: 32px;
+    height: 140px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .power-fill {
+    width: 100%;
+    background: linear-gradient(to top, var(--neon-green), #AAFF00, #FFD700, #FF8C00, var(--neon-red));
+    border-radius: 16px;
+    transition: height 0.05s linear;
+    height: 0%;
+  }
+
+  .power-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: #E8D5B0;
+  }
+
+  /* ═══════════════ OVERLAYS ═══════════════ */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .overlay.hidden { display: none; }
+
+  .overlay-card {
+    background: var(--score-bg);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 16px;
+    padding: 40px 50px;
+    text-align: center;
+    max-width: 460px;
+    width: 90%;
+    box-shadow: 0 0 60px rgba(255,215,0,0.1);
+  }
+
+  .overlay-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 6px;
+    color: var(--neon-gold);
+    text-shadow: 0 0 30px rgba(255,215,0,0.6);
+    margin-bottom: 8px;
+  }
+
+  .overlay-sub {
+    font-size: 13px;
+    color: rgba(232,213,176,0.6);
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+  }
+
+  .overlay-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--neon-blue);
+    text-shadow: 0 0 12px rgba(0,212,255,0.5);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(232,213,176,0.4);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .rank-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    padding: 8px 20px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 4px;
+    padding: 14px 40px;
+    background: var(--neon-gold);
+    color: #0D0A08;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+  }
+
+  .btn-primary:hover {
+    background: #FFF;
+    box-shadow: 0 0 40px rgba(255,215,0,0.6);
+    transform: scale(1.04);
+  }
+
+  /* Feedback flash */
+  #feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    letter-spacing: 8px;
+    pointer-events: none;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s;
+    text-shadow: 0 0 40px currentColor;
+  }
+
+  #feedback.show { opacity: 1; }
+
+  #hint-text {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(255,215,0,0.4);
+    text-align: center;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- Scoreboard -->
+<div id="scoreboard">
+  <div class="game-title">🎳 MiniBowling</div>
+  <div class="score-frames" id="score-frames"></div>
+  <div class="total-score-display">TOTAL: <span id="total-display">0</span></div>
+</div>
+
+<!-- Game Area -->
+<div id="game-area">
+  <div class="side-panel">
+    <div class="aim-label">AIM</div>
+    <div class="aim-indicator">
+      <div class="aim-arrow" id="aim-arrow"></div>
+    </div>
+    <div id="angle-text" style="font-size:11px;color:var(--neon-blue);">0°</div>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="gameCanvas"></canvas>
+    <div id="hint-text">MOVE MOUSE TO AIM · HOLD TO CHARGE · RELEASE TO BOWL</div>
+  </div>
+
+  <div class="power-panel">
+    <div class="power-label">POWER</div>
+    <div class="power-meter-wrap">
+      <div class="power-fill" id="power-fill"></div>
+    </div>
+    <div class="power-pct"><span id="power-pct">0</span>%</div>
+  </div>
+</div>
+
+<!-- Feedback -->
+<div id="feedback"></div>
+
+<!-- Game Over Overlay -->
+<div class="overlay hidden" id="game-over-overlay">
+  <div class="overlay-card">
+    <div class="overlay-title">GAME OVER</div>
+    <div class="overlay-sub">10 FRAMES COMPLETE</div>
+    <div class="overlay-stats">
+      <div class="stat-box">
+        <div class="stat-value" id="final-score">0</div>
+        <div class="stat-label">Final Score</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="final-strikes">0</div>
+        <div class="stat-label">Strikes</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="final-spares">0</div>
+        <div class="stat-label">Spares</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="final-accuracy">0%</div>
+        <div class="stat-label">Accuracy</div>
+      </div>
+    </div>
+    <div class="rank-badge" id="rank-badge"></div>
+    <br>
+    <button class="btn-primary" onclick="initGame()">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// MINI BOWLING — Full Implementation
+// ═══════════════════════════════════════════════════════
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ─── Layout ───────────────────────────────────────────
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  canvas.width = w;
+  canvas.height = h;
+}
+
+// ─── Constants ────────────────────────────────────────
+const STATES = {
+  READY: 'READY',
+  AIMING: 'AIMING',
+  POWER_CHARGING: 'POWER_CHARGING',
+  ROLLING: 'ROLLING',
+  PHYSICS_ACTIVE: 'PHYSICS_ACTIVE',
+  FRAME_END: 'FRAME_END',
+  GAME_OVER: 'GAME_OVER'
+};
+
+// ─── Physics ──────────────────────────────────────────
+class Vec2 {
+  constructor(x=0, y=0) { this.x=x; this.y=y; }
+  add(v) { return new Vec2(this.x+v.x, this.y+v.y); }
+  sub(v) { return new Vec2(this.x-v.x, this.y-v.y); }
+  scale(s) { return new Vec2(this.x*s, this.y*s); }
+  dot(v) { return this.x*v.x + this.y*v.y; }
+  len() { return Math.sqrt(this.x*this.x+this.y*this.y); }
+  norm() { const l=this.len(); return l>0 ? this.scale(1/l) : new Vec2(); }
+  clone() { return new Vec2(this.x, this.y); }
+}
+
+// ─── Game State ───────────────────────────────────────
+let G = {};
+
+function initGame() {
+  resizeCanvas();
+  document.getElementById('game-over-overlay').classList.add('hidden');
+
+  G = {
+    state: STATES.READY,
+    currentFrame: 0,
+    currentRoll: 0, // 0 or 1
+    frames: Array.from({length:10}, ()=>({ rolls:[], type:null, frameScore:null, runningTotal:null })),
+    totalScore: 0,
+    strikeCount: 0,
+    spareCount: 0,
+    rollCount: 0,
+    pinsKnockedTotal: 0,
+    // ball
+    ball: null,
+    ballRadius: 0,
+    ballAngle: 0, // visual rotation
+    // pins
+    pins: [],
+    pinRadius: 0,
+    pinStanding: [],
+    secondRollPins: null, // which pins were standing for 2nd roll
+    // aim
+    aimAngle: 0, // radians, 0=straight
+    mouseX: 0,
+    // power
+    power: 0,
+    charging: false,
+    powerInterval: null,
+    // physics
+    physicsTimer: null,
+    settleTimer: null,
+    // lane geometry
+    laneLeft: 0,
+    laneRight: 0,
+    laneTop: 0,
+    laneBottom: 0,
+    laneWidth: 0,
+    ballStartX: 0,
+    ballStartY: 0,
+    pinAreaCenterX: 0,
+    pinAreaTopY: 0,
+  };
+
+  computeLaneGeometry();
+  setupPins();
+  resetBall();
+  buildScoreboard();
+  updateScoreboard();
+  setState(STATES.READY);
+  renderLoop();
+}
+
+function computeLaneGeometry() {
+  const W = canvas.width, H = canvas.height;
+  const lw = Math.min(W * 0.72, 320);
+  G.laneLeft = (W - lw) / 2;
+  G.laneRight = G.laneLeft + lw;
+  G.laneTop = H * 0.04;
+  G.laneBottom = H * 0.97;
+  G.laneWidth = lw;
+  G.pinRadius = lw * 0.05;
+  G.ballRadius = lw * 0.07;
+  G.ballStartX = W / 2;
+  G.ballStartY = G.laneBottom - G.ballRadius - 10;
+  G.pinAreaCenterX = W / 2;
+  G.pinAreaTopY = G.laneTop + G.pinRadius * 4;
+}
+
+// Pin layout (10 pins, triangle)
+const PIN_LAYOUT = [
+  [0,0],               // 1 (front)
+  [-1,1],[1,1],        // 2,3
+  [-2,2],[0,2],[2,2],  // 4,5,6
+  [-3,3],[-1,3],[1,3],[3,3] // 7,8,9,10
+];
+
+function setupPins(keepDown=[]) {
+  G.pins = [];
+  G.pinStanding = [];
+  const spacing = G.pinRadius * 2.5;
+  for (let i=0; i<10; i++) {
+    const [col,row] = PIN_LAYOUT[i];
+    const x = G.pinAreaCenterX + col * spacing;
+    const y = G.pinAreaTopY + row * spacing;
+    const standing = !keepDown.includes(i);
+    G.pins.push({
+      x, y, vx:0, vy:0,
+      baseX:x, baseY:y,
+      radius: G.pinRadius,
+      standing,
+      falling: false,
+      fallAngle: 0,
+      fallSpeed: 0,
+      rotation: (Math.random()-0.5)*0.15
+    });
+    G.pinStanding.push(standing);
+  }
+}
+
+function resetBall() {
+  G.ball = { x: G.ballStartX, y: G.ballStartY, vx:0, vy:0 };
+}
+
+// ─── State Machine ────────────────────────────────────
+function setState(s) {
+  G.state = s;
+  const hint = document.getElementById('hint-text');
+  if (s === STATES.READY || s === STATES.AIMING) {
+    hint.style.opacity='1';
+    hint.textContent = 'MOVE MOUSE TO AIM · HOLD TO CHARGE · RELEASE TO BOWL';
+  } else if (s === STATES.POWER_CHARGING) {
+    hint.textContent = 'RELEASE TO BOWL';
+  } else {
+    hint.style.opacity='0';
+  }
+}
+
+// ─── Physics Step ─────────────────────────────────────
+const FRICTION = 0.018;
+const BALL_RESTITUTION = 0.35;
+const PIN_RESTITUTION = 0.45;
+const PIN_MASS = 1;
+const BALL_MASS = 7;
+const SETTLE_VELOCITY = 0.3;
+
+function physicsStep() {
+  const b = G.ball;
+
+  // Ball friction
+  const speed = Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+  if (speed > 0.05) {
+    const fric = FRICTION * speed;
+    b.vx -= (b.vx/speed)*fric;
+    b.vy -= (b.vy/speed)*fric;
+  } else {
+    b.vx = 0; b.vy = 0;
+  }
+
+  b.x += b.vx;
+  b.y += b.vy;
+
+  // Ball rotation for visual
+  G.ballAngle += speed * 0.05;
+
+  // Wall bounce
+  if (b.x - G.ballRadius < G.laneLeft) {
+    b.x = G.laneLeft + G.ballRadius;
+    b.vx = Math.abs(b.vx) * BALL_RESTITUTION;
+  }
+  if (b.x + G.ballRadius > G.laneRight) {
+    b.x = G.laneRight - G.ballRadius;
+    b.vx = -Math.abs(b.vx) * BALL_RESTITUTION;
+  }
+
+  // Ball-pin collisions
+  for (let i=0; i<G.pins.length; i++) {
+    const p = G.pins[i];
+    if (!p.standing) continue;
+    const dx = b.x - p.x;
+    const dy = b.y - p.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    const minDist = G.ballRadius + G.pinRadius;
+    if (dist < minDist && dist > 0.001) {
+      // Collision normal
+      const nx = dx/dist, ny = dy/dist;
+      // Relative velocity
+      const rv = (b.vx - p.vx)*nx + (b.vy - p.vy)*ny;
+      if (rv < 0) {
+        const j = -(1 + BALL_RESTITUTION) * rv / (1/BALL_MASS + 1/PIN_MASS);
+        b.vx += (j/BALL_MASS)*nx;
+        b.vy += (j/BALL_MASS)*ny;
+        p.vx -= (j/PIN_MASS)*nx;
+        p.vy -= (j/PIN_MASS)*ny;
+      }
+      // Separate
+      const overlap = minDist - dist;
+      b.x += nx * overlap * 0.5;
+      b.y += ny * overlap * 0.5;
+      p.x -= nx * overlap * 0.5;
+      p.y -= ny * overlap * 0.5;
+
+      // Knock pin over if velocity strong enough
+      const impactSpeed = Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+      if (impactSpeed > 2) {
+        knockPin(i, p.vx, p.vy);
+      }
+    }
+  }
+
+  // Pin-pin collisions
+  for (let i=0; i<G.pins.length; i++) {
+    for (let j=i+1; j<G.pins.length; j++) {
+      const a=G.pins[i], b2=G.pins[j];
+      if (!a.standing || !b2.standing) continue;
+      const dx=a.x-b2.x, dy=a.y-b2.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const minD=G.pinRadius*2;
+      if (dist < minD && dist > 0.001) {
+        const nx=dx/dist, ny=dy/dist;
+        const rv=(a.vx-b2.vx)*nx+(a.vy-b2.vy)*ny;
+        if (rv<0) {
+          const j2=-(1+PIN_RESTITUTION)*rv*0.5;
+          a.vx+=j2*nx; a.vy+=j2*ny;
+          b2.vx-=j2*nx; b2.vy-=j2*ny;
+        }
+        const ov=minD-dist;
+        a.x+=nx*ov*0.5; a.y+=ny*ov*0.5;
+        b2.x-=nx*ov*0.5; b2.y-=ny*ov*0.5;
+        const sp=Math.sqrt(b2.vx*b2.vx+b2.vy*b2.vy);
+        if (sp>2) knockPin(j, b2.vx, b2.vy);
+        const sp2=Math.sqrt(a.vx*a.vx+a.vy*a.vy);
+        if (sp2>2) knockPin(i, a.vx, a.vy);
+      }
+    }
+  }
+
+  // Pin friction
+  for (const p of G.pins) {
+    if (!p.standing) continue;
+    p.vx *= 0.88; p.vy *= 0.88;
+    p.x += p.vx; p.y += p.vy;
+  }
+
+  // Check if settled
+  const bSpeed = Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+  const pMoving = G.pins.some(p=>p.standing && (Math.abs(p.vx)>SETTLE_VELOCITY || Math.abs(p.vy)>SETTLE_VELOCITY));
+  const ballOff = b.y < G.laneTop - 50;
+
+  if (!pMoving && (bSpeed < SETTLE_VELOCITY || ballOff)) {
+    // Count knocked pins
+    finishRoll();
+  }
+}
+
+function knockPin(i, vx, vy) {
+  const p = G.pins[i];
+  if (!p.standing) return;
+  p.standing = false;
+  G.pinStanding[i] = false;
+  // Animate fall direction
+  p.fallAngle = Math.atan2(vy, vx);
+  p.falling = true;
+  p.fallProgress = 0;
+}
+
+let physFrame = null;
+function startPhysics() {
+  setState(STATES.PHYSICS_ACTIVE);
+  let maxFrames = 600;
+  function step() {
+    physicsStep();
+    maxFrames--;
+    const b=G.ball;
+    const bSpeed=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+    const ballOff=b.y < G.laneTop - 60;
+    const pMoving=G.pins.some(p=>p.standing&&(Math.abs(p.vx)>SETTLE_VELOCITY||Math.abs(p.vy)>SETTLE_VELOCITY));
+    if (maxFrames<=0 || (bSpeed<SETTLE_VELOCITY && !pMoving) || ballOff) {
+      finishRoll();
+      return;
+    }
+    physFrame = requestAnimationFrame(step);
+  }
+  physFrame = requestAnimationFrame(step);
+}
+
+let rollFinished = false;
+function finishRoll() {
+  if (rollFinished) return;
+  rollFinished = true;
+  if (physFrame) { cancelAnimationFrame(physFrame); physFrame=null; }
+
+  // Count pins knocked this roll
+  const nowDown = G.pins.filter(p=>!p.standing).length;
+  const prevDown = G.currentRoll === 0 ? 0 : (10 - (G.secondRollPins ? G.secondRollPins.filter(x=>x).length : 10));
+  const knocked = nowDown - prevDown;
+
+  recordRoll(knocked);
+}
+
+// ─── Scoring Logic ────────────────────────────────────
+function recordRoll(knocked) {
+  const frame = G.currentFrame;
+  const roll = G.currentRoll;
+  const f = G.frames[frame];
+
+  f.rolls.push(knocked);
+  G.rollCount++;
+  G.pinsKnockedTotal += knocked;
+
+  // Determine what happens next
+  let isStrike = false, isSpare = false;
+
+  if (frame < 9) {
+    if (roll === 0 && knocked === 10) {
+      isStrike = true;
+      f.type = 'strike';
+    } else if (roll === 1) {
+      if (f.rolls[0] + knocked === 10) { isSpare = true; f.type = 'spare'; }
+      else f.type = 'open';
+    }
+  } else {
+    // 10th frame special logic
+    if (roll === 0 && knocked === 10) isStrike = true;
+    if (roll === 1) {
+      if (f.rolls[0]===10 && knocked===10) isStrike = true;
+      else if (f.rolls[0]+knocked===10) isSpare = true;
+    }
+    if (roll === 2) {
+      f.type = 'done';
+    }
+  }
+
+  // Show feedback
+  if (isStrike) {
+    G.strikeCount++;
+    showFeedback('STRIKE!', 'var(--neon-gold)');
+  } else if (isSpare) {
+    G.spareCount++;
+    showFeedback('SPARE!', 'var(--neon-blue)');
+  } else if (knocked === 0) {
+    showFeedback('GUTTER', '#888');
+  }
+
+  // Compute running scores
+  computeScores();
+  updateScoreboard();
+
+  // Decide next action after short delay
+  setTimeout(() => advanceState(frame, roll, isStrike, isSpare, knocked), isStrike || isSpare ? 1200 : 700);
+}
+
+function advanceState(frame, roll, isStrike, isSpare, knocked) {
+  const isFrame10 = frame === 9;
+  const f = G.frames[frame];
+
+  if (!isFrame10) {
+    if (roll === 0 && isStrike) {
+      // Next frame
+      nextFrame();
+    } else if (roll === 0) {
+      // Second roll — keep knocked pins down
+      G.secondRollPins = [...G.pinStanding];
+      const keepDown = G.pins.map((p,i)=>!p.standing ? i : -1).filter(x=>x>=0);
+      setupPins(keepDown);
+      G.currentRoll = 1;
+      resetBall();
+      rollFinished = false;
+      setState(STATES.READY);
+    } else {
+      // End of frame
+      nextFrame();
+    }
+  } else {
+    // 10th frame: allow up to 3 rolls
+    const totalRolls = f.rolls.length;
+    const allowBonus = f.rolls[0]===10 || (f.rolls.length>=2 && f.rolls[0]+f.rolls[1]===10);
+    if (totalRolls >= 3 || (totalRolls === 2 && !allowBonus)) {
+      endGame();
+      return;
+    }
+    // Reset pins for bonus ball after strike/spare
+    if (totalRolls === 1 && isStrike) {
+      setupPins([]);
+    } else if (totalRolls === 2 && isStrike && f.rolls[1]===10) {
+      setupPins([]);
+    } else if (totalRolls === 2 && !isStrike) {
+      // spare on 2nd roll of 10th: fresh set
+      if (allowBonus) setupPins([]);
+    }
+    G.currentRoll = totalRolls;
+    resetBall();
+    rollFinished = false;
+    setState(STATES.READY);
+  }
+}
+
+function nextFrame() {
+  G.currentFrame++;
+  G.currentRoll = 0;
+  G.secondRollPins = null;
+  if (G.currentFrame >= 10) { endGame(); return; }
+  setupPins([]);
+  resetBall();
+  rollFinished = false;
+  setState(STATES.READY);
+  buildScoreboard();
+  updateScoreboard();
+}
+
+function computeScores() {
+  // Standard scoring with lookahead
+  let total = 0;
+  for (let i=0; i<10; i++) {
+    const f = G.frames[i];
+    if (!f.rolls.length) break;
+    // Flatten all rolls for lookahead
+    const allRolls = getAllRollsFlat();
+    let frameStart = 0;
+    for (let k=0; k<i; k++) {
+      if (k < 9) {
+        frameStart += G.frames[k].type === 'strike' ? 1 : 2;
+      } else {
+        frameStart += G.frames[k].rolls.length;
+      }
+    }
+    let score = 0;
+    if (i < 9) {
+      if (f.type === 'strike') {
+        score = 10 + (allRolls[frameStart+1]||0) + (allRolls[frameStart+2]||0);
+      } else if (f.type === 'spare') {
+        score = 10 + (allRolls[frameStart+2]||0);
+      } else {
+        score = (f.rolls[0]||0) + (f.rolls[1]||0);
+      }
+    } else {
+      score = f.rolls.reduce((s,r)=>s+r,0);
+    }
+    total += score;
+    f.frameScore = score;
+    f.runningTotal = total;
+  }
+  G.totalScore = total;
+  document.getElementById('total-display').textContent = total;
+}
+
+function getAllRollsFlat() {
+  const rolls = [];
+  for (let i=0; i<10; i++) {
+    const f = G.frames[i];
+    if (i < 9 && f.type==='strike') rolls.push(10);
+    else rolls.push(...f.rolls);
+  }
+  return rolls;
+}
+
+// ─── Scoreboard UI ────────────────────────────────────
+function buildScoreboard() {
+  const el = document.getElementById('score-frames');
+  el.innerHTML = '';
+  for (let i=0; i<10; i++) {
+    const box = document.createElement('div');
+    box.className = 'frame-box';
+    box.id = `frame-${i}`;
+
+    const label = document.createElement('div');
+    label.className = 'frame-label';
+    label.textContent = `F${i+1}`;
+
+    const rolls = document.createElement('div');
+    rolls.className = 'frame-rolls';
+    rolls.id = `rolls-${i}`;
+
+    // Create roll cells
+    const numCells = i===9 ? 3 : 2;
+    for (let r=0; r<numCells; r++) {
+      const cell = document.createElement('div');
+      cell.className = 'roll-cell';
+      cell.id = `roll-${i}-${r}`;
+      rolls.appendChild(cell);
+    }
+
+    const score = document.createElement('div');
+    score.className = 'frame-score';
+    score.id = `fscore-${i}`;
+
+    box.appendChild(label);
+    box.appendChild(rolls);
+    box.appendChild(score);
+    el.appendChild(box);
+  }
+}
+
+function updateScoreboard() {
+  for (let i=0; i<10; i++) {
+    const f = G.frames[i];
+    const box = document.getElementById(`frame-${i}`);
+    if (!box) continue;
+
+    // Active frame highlight
+    box.className = 'frame-box' + (i === G.currentFrame ? ' active' : '');
+
+    // Fill roll cells
+    if (i < 9) {
+      const c0 = document.getElementById(`roll-${i}-0`);
+      const c1 = document.getElementById(`roll-${i}-1`);
+      c0.className='roll-cell'; c1.className='roll-cell';
+      c0.textContent=''; c1.textContent='';
+
+      if (f.type==='strike') {
+        c0.textContent=''; c1.textContent='X';
+        c1.className='roll-cell strike';
+      } else if (f.rolls.length>=1) {
+        c0.textContent = f.rolls[0]===0?'-':f.rolls[0];
+        if (f.type==='spare') {
+          c1.textContent='/'; c1.className='roll-cell spare';
+        } else if (f.rolls.length>=2) {
+          c1.textContent = f.rolls[1]===0?'-':f.rolls[1];
+        }
+      }
+    } else {
+      // 10th frame: 3 cells
+      for (let r=0; r<3; r++) {
+        const c = document.getElementById(`roll-${i}-${r}`);
+        c.className='roll-cell'; c.textContent='';
+        if (f.rolls.length > r) {
+          const v = f.rolls[r];
+          if (v===10) { c.textContent='X'; c.className='roll-cell strike'; }
+          else if (r>0 && f.rolls[r-1]+v===10 && f.rolls[r-1]!==10) { c.textContent='/'; c.className='roll-cell spare'; }
+          else { c.textContent = v===0?'-':v; }
+        }
+      }
+    }
+
+    // Running total
+    const sc = document.getElementById(`fscore-${i}`);
+    sc.textContent = f.runningTotal !== null ? f.runningTotal : '';
+  }
+}
+
+// ─── Feedback ─────────────────────────────────────────
+let feedbackTimer = null;
+function showFeedback(text, color) {
+  const el = document.getElementById('feedback');
+  el.textContent = text;
+  el.style.color = color;
+  el.classList.add('show');
+  if (feedbackTimer) clearTimeout(feedbackTimer);
+  feedbackTimer = setTimeout(()=>el.classList.remove('show'), 1000);
+}
+
+// ─── End Game ─────────────────────────────────────────
+function endGame() {
+  setState(STATES.GAME_OVER);
+  const total = G.totalScore;
+  const strikes = G.strikeCount;
+  const spares = G.spareCount;
+  const pinsTotal = 10 * G.frames.filter(f=>f.rolls.length).length * 10;
+  const accuracy = G.rollCount > 0 ? Math.round((G.pinsKnockedTotal / (G.rollCount * 10)) * 100) : 0;
+
+  document.getElementById('final-score').textContent = total;
+  document.getElementById('final-strikes').textContent = strikes;
+  document.getElementById('final-spares').textContent = spares;
+  document.getElementById('final-accuracy').textContent = accuracy + '%';
+
+  let rank, rankColor;
+  if (total >= 200) { rank='👑 ALLEY KING'; rankColor='var(--neon-gold)'; }
+  else if (total >= 150) { rank='⚡ PRO'; rankColor='var(--neon-blue)'; }
+  else if (total >= 100) { rank='🎳 CASUAL'; rankColor='var(--neon-green)'; }
+  else { rank='🌱 BEGINNER'; rankColor='#888'; }
+
+  const rb = document.getElementById('rank-badge');
+  rb.textContent = rank;
+  rb.style.background = 'rgba(255,255,255,0.05)';
+  rb.style.border = `1px solid ${rankColor}`;
+  rb.style.color = rankColor;
+
+  setTimeout(()=>document.getElementById('game-over-overlay').classList.remove('hidden'), 600);
+}
+
+// ─── Input ────────────────────────────────────────────
+canvas.addEventListener('mousemove', (e) => {
+  if (G.state !== STATES.READY && G.state !== STATES.AIMING && G.state !== STATES.POWER_CHARGING) return;
+  const rect = canvas.getBoundingClientRect();
+  G.mouseX = e.clientX - rect.left;
+  const cx = canvas.width / 2;
+  const dx = G.mouseX - cx;
+  G.aimAngle = Math.max(-Math.PI/12, Math.min(Math.PI/12, dx / canvas.width * (Math.PI/2)));
+  document.getElementById('angle-text').textContent = Math.round(G.aimAngle * 180/Math.PI) + '°';
+
+  const arrow = document.getElementById('aim-arrow');
+  arrow.style.transform = `rotate(${G.aimAngle * 180/Math.PI}deg)`;
+
+  if (G.state === STATES.READY) setState(STATES.AIMING);
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  if (G.state !== STATES.AIMING && G.state !== STATES.READY) return;
+  G.charging = true;
+  G.power = 0;
+  setState(STATES.POWER_CHARGING);
+  G.powerInterval = setInterval(() => {
+    G.power = Math.min(100, G.power + 1.2);
+    document.getElementById('power-fill').style.height = G.power + '%';
+    document.getElementById('power-pct').textContent = Math.round(G.power);
+  }, 20);
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (G.state !== STATES.POWER_CHARGING) return;
+  clearInterval(G.powerInterval);
+  const p = G.power;
+  G.power = 0;
+  document.getElementById('power-fill').style.height = '0%';
+  document.getElementById('power-pct').textContent = '0';
+  launchBall(p);
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  G.mouseX = t.clientX - rect.left;
+  const cx = canvas.width / 2;
+  const dx = G.mouseX - cx;
+  G.aimAngle = Math.max(-Math.PI/12, Math.min(Math.PI/12, dx / canvas.width * (Math.PI/2)));
+  if (G.state === STATES.READY || G.state === STATES.AIMING) {
+    G.charging = true; G.power = 0;
+    setState(STATES.POWER_CHARGING);
+    G.powerInterval = setInterval(()=>{
+      G.power=Math.min(100,G.power+1.2);
+      document.getElementById('power-fill').style.height=G.power+'%';
+      document.getElementById('power-pct').textContent=Math.round(G.power);
+    },20);
+  }
+}, {passive:false});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  G.mouseX = t.clientX - rect.left;
+  const cx = canvas.width / 2;
+  const dx = G.mouseX - cx;
+  G.aimAngle = Math.max(-Math.PI/12, Math.min(Math.PI/12, dx / canvas.width * (Math.PI/2)));
+  document.getElementById('angle-text').textContent = Math.round(G.aimAngle * 180/Math.PI) + '°';
+  document.getElementById('aim-arrow').style.transform = `rotate(${G.aimAngle*180/Math.PI}deg)`;
+}, {passive:false});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (G.state !== STATES.POWER_CHARGING) return;
+  clearInterval(G.powerInterval);
+  const p = G.power;
+  G.power = 0;
+  document.getElementById('power-fill').style.height='0%';
+  document.getElementById('power-pct').textContent='0';
+  launchBall(p);
+}, {passive:false});
+
+function launchBall(power) {
+  const speed = 5 + (power / 100) * 20;
+  G.ball.vx = Math.sin(G.aimAngle) * speed;
+  G.ball.vy = -speed * Math.cos(G.aimAngle);
+  rollFinished = false;
+  setState(STATES.ROLLING);
+  startPhysics();
+}
+
+// ─── Render ───────────────────────────────────────────
+let raf;
+function renderLoop() {
+  if (G.state === STATES.GAME_OVER) { drawFrame(); return; }
+  drawFrame();
+  raf = requestAnimationFrame(renderLoop);
+}
+
+function drawFrame() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  drawLane();
+  drawAimLine();
+  drawPins();
+  drawBall();
+}
+
+function drawLane() {
+  const { laneLeft: ll, laneRight: lr, laneTop: lt, laneBottom: lb } = G;
+  const W = canvas.width, H = canvas.height;
+
+  // Lane background (wood)
+  const woodGrad = ctx.createLinearGradient(ll, 0, lr, 0);
+  woodGrad.addColorStop(0, '#6B4226');
+  woodGrad.addColorStop(0.1, '#8B5E3C');
+  woodGrad.addColorStop(0.3, '#C4874A');
+  woodGrad.addColorStop(0.5, '#D4924F');
+  woodGrad.addColorStop(0.7, '#C4874A');
+  woodGrad.addColorStop(0.9, '#8B5E3C');
+  woodGrad.addColorStop(1, '#6B4226');
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(ll, lt, lr-ll, lb-lt, 4);
+  ctx.clip();
+  ctx.fillStyle = woodGrad;
+  ctx.fillRect(ll, lt, lr-ll, lb-lt);
+
+  // Wood grain lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  for (let y=lt; y<lb; y+=14) {
+    ctx.beginPath();
+    ctx.moveTo(ll, y + Math.sin(y*0.3)*1.5);
+    ctx.lineTo(lr, y + Math.sin(y*0.3+1)*1.5);
+    ctx.stroke();
+  }
+
+  // Lane guide arrows (classic bowling arrows)
+  const arrowY = lb - (lb-lt) * 0.22;
+  ctx.fillStyle = 'rgba(120,80,30,0.6)';
+  const arrowXs = [ll + (lr-ll)*0.2, ll + (lr-ll)*0.35, ll + (lr-ll)*0.5, ll + (lr-ll)*0.65, ll + (lr-ll)*0.8];
+  for (const ax of arrowXs) {
+    ctx.beginPath();
+    ctx.moveTo(ax, arrowY - 8);
+    ctx.lineTo(ax - 5, arrowY + 6);
+    ctx.lineTo(ax + 5, arrowY + 6);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Gutters
+  const gutterW = 18;
+  ctx.fillStyle = '#1A0A02';
+  ctx.beginPath(); ctx.roundRect(ll - gutterW, lt, gutterW, lb-lt, [4,0,0,4]); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(lr, lt, gutterW, lb-lt, [0,4,4,0]); ctx.fill();
+
+  // Foul line
+  ctx.strokeStyle = 'rgba(255,50,50,0.7)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  ctx.moveTo(ll, lb - 50);
+  ctx.lineTo(lr, lb - 50);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Lane border glow
+  ctx.strokeStyle = 'rgba(255,215,0,0.15)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(ll, lt, lr-ll, lb-lt, 4);
+  ctx.stroke();
+}
+
+function drawAimLine() {
+  if (G.state !== STATES.AIMING && G.state !== STATES.POWER_CHARGING) return;
+  const b = G.ball;
+  const angle = G.aimAngle;
+  const len = canvas.height * 0.55;
+  const ex = b.x + Math.sin(angle) * len;
+  const ey = b.y - Math.cos(angle) * len;
+
+  // Guide line with dash
+  const isExtreme = Math.abs(angle) > Math.PI/18;
+  const lineColor = isExtreme ? 'rgba(255,60,60,0.6)' : 'rgba(0,212,255,0.5)';
+  const glowColor = isExtreme ? 'rgba(255,60,60,0.2)' : 'rgba(0,212,255,0.15)';
+
+  ctx.save();
+  ctx.strokeStyle = glowColor;
+  ctx.lineWidth = 8;
+  ctx.setLineDash([12, 8]);
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([8, 10]);
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawPins() {
+  for (let i=0; i<G.pins.length; i++) {
+    const p = G.pins[i];
+    if (!p.standing) {
+      // Draw fallen pin (faded on ground)
+      if (p.falling) {
+        if (p.fallProgress === undefined) p.fallProgress = 0;
+        p.fallProgress = Math.min(1, (p.fallProgress||0) + 0.05);
+      }
+      const prog = p.fallProgress || 1;
+      ctx.save();
+      ctx.globalAlpha = 0.25 * (1-prog) + 0.08;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation + prog * Math.PI/2);
+      drawPinShape(p.radius * (1 - prog * 0.3));
+      ctx.restore();
+      continue;
+    }
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    drawPinShape(p.radius);
+    ctx.restore();
+  }
+}
+
+function drawPinShape(r) {
+  // Pin body
+  const grad = ctx.createRadialGradient(-r*0.3, -r*0.3, r*0.1, 0, 0, r);
+  grad.addColorStop(0, '#FFFFFF');
+  grad.addColorStop(0.4, '#F0EDE8');
+  grad.addColorStop(1, '#C8BFB0');
+
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r, r*1.25, 0, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Red stripe
+  ctx.beginPath();
+  ctx.ellipse(0, r*0.3, r*0.7, r*0.18, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(200,30,30,0.85)';
+  ctx.fill();
+
+  // Shine
+  ctx.beginPath();
+  ctx.ellipse(-r*0.25, -r*0.35, r*0.2, r*0.1, -0.5, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fill();
+}
+
+function drawBall() {
+  const b = G.ball;
+  if (!b) return;
+
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(G.ballAngle);
+
+  const r = G.ballRadius;
+  const grad = ctx.createRadialGradient(-r*0.35, -r*0.35, r*0.05, 0, 0, r);
+  grad.addColorStop(0, '#5A5A9A');
+  grad.addColorStop(0.3, '#2A2A5E');
+  grad.addColorStop(0.7, '#1A1A3E');
+  grad.addColorStop(1, '#0D0D20');
+
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Finger holes
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.arc(-r*0.2, -r*0.1, r*0.12, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r*0.2, -r*0.1, r*0.12, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, r*0.2, r*0.12, 0, Math.PI*2); ctx.fill();
+
+  // Shine
+  ctx.beginPath();
+  ctx.arc(-r*0.28, -r*0.28, r*0.18, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(150,150,200,0.3)';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── Init ─────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  computeLaneGeometry();
+  // Re-place pins and ball
+  const keepDown = G.pins ? G.pins.map((p,i)=>!p.standing?i:-1).filter(x=>x>=0) : [];
+  if (G.pins) setupPins(keepDown);
+  if (G.ball) resetBall();
+});
+
+initGame();
+</script>
+</body>
+</html>
