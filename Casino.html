@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Fortune™ — Luxury Arcade Mode [OBSIDIAN EDITION V3]</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   NEON FORTUNE™ — OBSIDIAN EDITION V3
+   CSS LAYER — PRODUCTION BUILD
+   ═══════════════════════════════════════════════ */
+:root{
+  --black:    #050504;
+  --deep:     #090907;
+  --panel:    #0d0c0a;
+  --card:     #121109;
+  --gold:     #c8a84b;
+  --gold2:    #e8c96a;
+  --gold3:    #f5e0a0;
+  --gold4:    #fff8d8;
+  --em:       #2aff8a;
+  --em2:      #00c96e;
+  --ruby:     #ff3a6e;
+  --ruby2:    #ff6b8a;
+  --sap:      #4ac8ff;
+  --sap2:     #80dcff;
+  --text:     #d4cfc0;
+  --muted:    #665f50;
+  --dim:      #3a3428;
+  --border:   rgba(200,168,75,0.18);
+  --border2:  rgba(200,168,75,0.08);
+  --border3:  rgba(200,168,75,0.04);
+  /* prestige-driven — updated by JS */
+  --pt-glow:  rgba(200,168,75,0.12);
+  --pt-trim:  #c8a84b;
+  --pt-accent:#e8c96a;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--black);color:var(--text);font-family:'Cormorant Garamond',serif;display:flex;flex-direction:column;}
+
+/* ─── AMBIENT LAYER ─────────────────────── */
+#envLayer{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  transition:background 1.4s ease;
+}
+#envLayer::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 900px 600px at 50% 55%,var(--pt-glow) 0%,transparent 68%),
+    radial-gradient(ellipse 500px 350px at 12% 45%,rgba(42,255,138,0.012) 0%,transparent 65%),
+    radial-gradient(ellipse 500px 350px at 88% 45%,rgba(74,200,255,0.012) 0%,transparent 65%);
+}
+#envLayer::after{
+  content:'';position:absolute;inset:0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.0035) 0px,transparent 1px,transparent 80px,rgba(255,255,255,0.0035) 81px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,0.0025) 0px,transparent 1px,transparent 80px,rgba(255,255,255,0.0025) 81px);
+}
+
+/* Win-reactive environment flash */
+#envFlash{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity 0.15s;}
+
+/* Light sweep */
+#sweep{
+  position:fixed;top:0;left:-30%;width:28%;height:100%;pointer-events:none;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(200,168,75,0.038),transparent);
+  animation:sweepAnim 9s linear infinite;
+}
+@keyframes sweepAnim{0%{left:-30%}100%{left:110%}}
+
+/* ─── HEADER ─────────────────────────────── */
+header{
+  flex-shrink:0;position:relative;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 26px;
+  background:linear-gradient(90deg,transparent,#0f0e0c 25%,#0f0e0c 75%,transparent);
+  border-bottom:1px solid var(--border);
+}
+header::after{
+  content:'';position:absolute;bottom:-1px;left:6%;right:6%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--pt-trim),transparent);
+  opacity:0.55;transition:background 1s;
+}
+.logo{font-family:'Orbitron',monospace;font-weight:900;font-size:0.95rem;color:var(--gold2);letter-spacing:7px;text-shadow:0 0 28px rgba(200,168,75,0.45);}
+.logo em{display:block;font-style:normal;font-family:'Cormorant Garamond',serif;font-size:0.46rem;letter-spacing:5px;color:var(--muted);font-weight:300;margin-top:1px;}
+.hdr-stats{display:flex;gap:20px;align-items:center;}
+.hs{font-family:'Share Tech Mono',monospace;font-size:0.56rem;color:var(--muted);letter-spacing:1px;text-align:center;}
+.hs .v{display:block;font-size:0.88rem;color:var(--gold2);text-shadow:0 0 10px rgba(200,168,75,0.38);margin-bottom:1px;transition:color 0.3s;}
+.hs .v.flash{animation:statFlash 0.5s ease-out;}
+@keyframes statFlash{0%,100%{color:var(--gold2);}50%{color:var(--gold4);text-shadow:0 0 20px rgba(200,168,75,0.8);}}
+.pt-badge{
+  font-family:'Share Tech Mono',monospace;font-size:0.53rem;letter-spacing:3px;
+  color:var(--pt-trim);border:1px solid var(--border);padding:5px 15px;
+  background:rgba(200,168,75,0.04);position:relative;overflow:hidden;
+  transition:color 0.8s,border-color 0.8s;
+}
+.pt-badge::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(200,168,75,0.07) 0%,transparent 55%);}
+
+/* ─── MAIN FRAME ─────────────────────────── */
+main{flex:1;overflow:hidden;position:relative;z-index:5;display:flex;flex-direction:column;padding:10px 14px 8px;gap:8px;}
+
+/* ─── OBJECTIVES BAR ─────────────────────── */
+#objBar{display:flex;gap:7px;flex-shrink:0;}
+.oc{
+  flex:1;background:var(--border3);border:1px solid var(--border2);
+  padding:6px 10px;position:relative;overflow:hidden;
+  transition:border-color 0.4s,background 0.4s;
+}
+.oc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--em2);opacity:0;transition:opacity 0.4s;}
+.oc.done{border-color:rgba(42,255,138,0.35);background:rgba(42,255,138,0.03);}
+.oc.done::before{opacity:1;}
+.oc-lbl{font-family:'Share Tech Mono',monospace;font-size:0.44rem;letter-spacing:2px;color:var(--muted);margin-bottom:2px;}
+.oc-txt{font-size:0.7rem;font-weight:600;color:var(--text);}
+.oc-prog{height:2px;background:rgba(255,255,255,0.05);margin-top:5px;border-radius:1px;overflow:hidden;}
+.oc-fill{height:100%;background:linear-gradient(90deg,var(--em2),var(--em));border-radius:1px;transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1);}
+.oc.done .oc-fill{background:var(--em);box-shadow:0 0 6px rgba(42,255,138,0.4);}
+.oc-rew{font-family:'Share Tech Mono',monospace;font-size:0.46rem;color:var(--gold);margin-top:2px;letter-spacing:1px;}
+
+/* ─── REELS AREA ─────────────────────────── */
+#reelsRow{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;min-height:0;}
+
+/* Machine frame */
+.mach{
+  display:flex;flex-direction:column;align-items:center;flex-shrink:0;
+  background:linear-gradient(175deg,#131109 0%,#0b0a08 100%);
+  border:1px solid rgba(200,168,75,0.2);
+  padding:12px 12px 14px;
+  position:relative;
+  box-shadow:0 0 55px rgba(0,0,0,0.96),0 0 0 1px rgba(200,168,75,0.05),inset 0 1px 0 rgba(255,255,255,0.04),inset 0 -1px 0 rgba(0,0,0,0.6);
+  transition:box-shadow 0.45s ease,border-color 0.45s ease;
+}
+.mach::before,.mach::after{content:'';position:absolute;width:11px;height:11px;border-style:solid;border-color:var(--pt-trim);transition:border-color 0.8s;}
+.mach::before{top:5px;left:5px;border-width:1px 0 0 1px;opacity:0.55;}
+.mach::after{bottom:5px;right:5px;border-width:0 1px 1px 0;opacity:0.55;}
+.mach.w-sm{box-shadow:0 0 70px rgba(200,168,75,0.22),0 0 0 1px rgba(200,168,75,0.18),inset 0 1px 0 rgba(255,255,255,0.05);}
+.mach.w-md{box-shadow:0 0 90px rgba(42,255,138,0.2),0 0 35px rgba(200,168,75,0.15),0 0 0 1px rgba(42,255,138,0.25);}
+.mach.w-big{box-shadow:0 0 110px rgba(42,255,138,0.28),0 0 50px rgba(200,168,75,0.22),0 0 0 2px rgba(42,255,138,0.35);border-color:rgba(42,255,138,0.3);}
+.mach.w-jp{box-shadow:0 0 140px rgba(255,58,110,0.45),0 0 70px rgba(200,168,75,0.3),0 0 0 2px rgba(255,58,110,0.55);border-color:rgba(255,58,110,0.4);}
+.mach-id{font-family:'Share Tech Mono',monospace;font-size:0.42rem;letter-spacing:4px;color:var(--muted);margin-bottom:5px;text-align:center;}
+
+/* Reel outer + glow ring */
+.ro{position:relative;}
+.gr{position:absolute;inset:-5px;pointer-events:none;z-index:10;opacity:0;border-radius:2px;transition:opacity 0.3s;}
+.gr.sp{opacity:1;animation:grSpin 0.42s ease-in-out infinite alternate;}
+.gr.win{opacity:1;animation:grWin 0.55s ease-in-out 3 forwards;}
+.gr.big{opacity:1;animation:grBig 0.4s ease-in-out 4 forwards;}
+.gr.jp{opacity:1;animation:grJp 0.28s ease-in-out infinite alternate;}
+@keyframes grSpin{from{box-shadow:0 0 8px var(--gold),0 0 20px rgba(200,168,75,0.12);}to{box-shadow:0 0 16px var(--em),0 0 35px rgba(42,255,138,0.18);}}
+@keyframes grWin{0%{box-shadow:none;}50%{box-shadow:0 0 28px var(--gold2),0 0 55px rgba(200,168,75,0.28);}100%{box-shadow:none;}}
+@keyframes grBig{0%{box-shadow:none;}50%{box-shadow:0 0 40px var(--em),0 0 70px rgba(42,255,138,0.35);}100%{box-shadow:none;}}
+@keyframes grJp{from{box-shadow:0 0 22px var(--ruby),0 0 55px rgba(255,58,110,0.42);}to{box-shadow:0 0 40px var(--gold3),0 0 80px rgba(200,168,75,0.5);}}
+
+/* Reel window */
+.rw{
+  width:176px;height:300px;overflow:hidden;
+  border:1px solid rgba(200,168,75,0.16);
+  background:#030302;position:relative;
+  box-shadow:inset 0 0 55px rgba(0,0,0,0.98),inset 0 0 12px rgba(0,0,0,0.5);
+}
+.rw::before,.rw::after{content:'';position:absolute;left:0;right:0;z-index:5;pointer-events:none;}
+.rw::before{top:0;height:85px;background:linear-gradient(to bottom,#030302 0%,transparent 100%);}
+.rw::after{bottom:0;height:85px;background:linear-gradient(to top,#030302 0%,transparent 100%);}
+
+/* Payline */
+.pl{
+  position:absolute;top:50%;left:0;right:0;height:50px;transform:translateY(-50%);
+  border-top:1px solid rgba(200,168,75,0.25);border-bottom:1px solid rgba(200,168,75,0.25);
+  background:rgba(200,168,75,0.02);z-index:4;pointer-events:none;
+  transition:background 0.3s,border-color 0.3s,box-shadow 0.3s;
+}
+.pl::before{content:'◈';position:absolute;left:4px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:0.48rem;opacity:0.5;}
+.pl::after{content:'◈';position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:0.48rem;opacity:0.5;}
+.pl.pw{background:rgba(200,168,75,0.07);border-color:rgba(200,168,75,0.65);box-shadow:0 0 12px rgba(200,168,75,0.2);}
+.pl.pb{background:rgba(42,255,138,0.07);border-color:rgba(42,255,138,0.6);box-shadow:0 0 16px rgba(42,255,138,0.2);}
+.pl.pj{background:rgba(255,58,110,0.08);border-color:rgba(255,58,110,0.75);box-shadow:0 0 20px rgba(255,58,110,0.3);animation:payJp 0.35s ease-in-out infinite alternate;}
+@keyframes payJp{from{box-shadow:0 0 12px rgba(255,58,110,0.3);}to{box-shadow:0 0 30px rgba(255,58,110,0.6),0 0 60px rgba(200,168,75,0.2);}}
+
+/* Reel strip */
+.rs{position:absolute;left:0;right:0;top:0;will-change:transform;}
+.ri{height:50px;display:flex;align-items:center;padding:0 10px;gap:8px;}
+.ri-icon{font-size:1.35rem;width:26px;text-align:center;flex-shrink:0;filter:drop-shadow(0 0 3px rgba(200,168,75,0.18));}
+.ri-info{flex:1;min-width:0;}
+.ri-name{font-family:'Cormorant Garamond',serif;font-size:0.76rem;font-weight:600;color:var(--text);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ri-tier{font-family:'Share Tech Mono',monospace;font-size:0.4rem;letter-spacing:2px;color:var(--muted);}
+.ri-mult{font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:var(--gold);flex-shrink:0;}
+.ri.fw{animation:riFlash 0.55s ease-out forwards;}
+.ri.fj{animation:riJp 0.35s ease-out 3 forwards;}
+@keyframes riFlash{0%{background:rgba(200,168,75,0.2);}55%{background:rgba(42,255,138,0.08);}100%{background:transparent;}}
+@keyframes riJp{0%{background:rgba(255,58,110,0.22);}50%{background:rgba(200,168,75,0.12);}100%{background:transparent;}}
+
+/* Per-reel canvas */
+.rc{position:absolute;inset:0;pointer-events:none;z-index:20;}
+
+/* Near-miss overlay */
+.nm{position:absolute;inset:0;z-index:15;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(200,168,75,0.11) 0%,transparent 70%);animation:nmAnim 0.9s ease-out forwards;}
+@keyframes nmAnim{0%{opacity:0;}28%{opacity:1;}100%{opacity:0;}}
+
+/* Reel badge */
+.rb{margin-top:5px;font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:2px;text-align:center;height:15px;color:var(--muted);transition:color 0.3s;}
+.rb.rw-s{color:var(--gold2);}
+.rb.rw-b{color:var(--em);}
+.rb.rw-j{color:var(--ruby);animation:badgePulse 0.4s ease-in-out infinite alternate;}
+@keyframes badgePulse{from{text-shadow:0 0 5px var(--ruby);}to{text-shadow:0 0 14px var(--ruby2);}}
+
+/* ─── WIN EVALUATOR (center column) ─────────── */
+#winEval{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 6px;min-width:110px;}
+.mc{width:100%;height:2px;background:linear-gradient(90deg,var(--border2),var(--border),var(--border2));position:relative;overflow:hidden;}
+.mc.mch::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--gold2),transparent);animation:mcFlow 0.5s ease-out;}
+@keyframes mcFlow{from{left:-100%;}to{left:100%;}}
+.combo-num{font-family:'Orbitron',monospace;font-weight:900;font-size:1.9rem;color:var(--gold2);text-shadow:0 0 18px rgba(200,168,75,0.45);text-align:center;line-height:1;transition:all 0.3s;}
+.combo-num.bang{animation:comboBang 0.38s ease-out;}
+@keyframes comboBang{0%{transform:scale(1.35);}100%{transform:scale(1);}}
+.combo-lbl{font-family:'Share Tech Mono',monospace;font-size:0.44rem;letter-spacing:3px;color:var(--muted);text-align:center;}
+.streak-wrap{width:84px;}
+.streak-lbl{font-family:'Share Tech Mono',monospace;font-size:0.42rem;letter-spacing:2px;color:var(--muted);text-align:center;margin-bottom:3px;}
+.streak-pips{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;}
+.pip{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);transition:all 0.3s;}
+.pip.on{background:var(--gold);border-color:var(--gold2);box-shadow:0 0 5px rgba(200,168,75,0.5);}
+.pip.fire{background:var(--ruby);border-color:var(--ruby2);box-shadow:0 0 5px var(--ruby);animation:pipFire 0.45s ease-in-out infinite alternate;}
+@keyframes pipFire{from{box-shadow:0 0 4px var(--ruby);}to{box-shadow:0 0 11px var(--ruby2);}}
+
+/* ─── BOTTOM PANEL ─────────────────────────── */
+#bot{flex-shrink:0;display:flex;gap:8px;align-items:stretch;}
+
+/* Meters */
+#meters{display:flex;gap:7px;flex:1;}
+.mb{flex:1;background:var(--border3);border:1px solid var(--border2);padding:7px 10px;}
+.mb-lbl{font-family:'Share Tech Mono',monospace;font-size:0.42rem;letter-spacing:3px;color:var(--muted);margin-bottom:4px;}
+.mb-bar{height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;margin-bottom:3px;}
+.mb-fill{height:100%;border-radius:2px;transition:width 0.55s cubic-bezier(0.34,1.56,0.64,1);}
+.mb-fill.luck{background:linear-gradient(90deg,var(--gold),var(--gold3));}
+.mb-fill.luck.charged{background:linear-gradient(90deg,var(--gold2),var(--gold4));box-shadow:0 0 8px rgba(200,168,75,0.6);animation:luckCharged 0.6s ease-in-out infinite alternate;}
+@keyframes luckCharged{from{box-shadow:0 0 5px rgba(200,168,75,0.5);}to{box-shadow:0 0 18px rgba(200,168,75,1),0 0 35px rgba(200,168,75,0.4);}}
+.mb-fill.xp{background:linear-gradient(90deg,var(--em2),var(--em));}
+.mb-fill.combo{background:linear-gradient(90deg,var(--ruby),var(--ruby2));}
+.mb-fill.hot{background:linear-gradient(90deg,#ff8c00,#ffcc00);}
+.mb-val{font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:var(--text);}
+.mb-val .hi{color:var(--gold2);}
+
+/* Controls */
+#ctrl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;}
+.btn-main{
+  width:215px;height:44px;font-family:'Orbitron',monospace;font-weight:700;font-size:0.72rem;
+  letter-spacing:4px;color:#06060a;
+  background:linear-gradient(135deg,#b89038 0%,#e8c96a 45%,#b89038 100%);
+  border:none;cursor:pointer;position:relative;overflow:hidden;
+  box-shadow:0 0 18px rgba(200,168,75,0.22),0 4px 18px rgba(0,0,0,0.75);
+  transition:transform 0.1s,box-shadow 0.22s;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+}
+.btn-main::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 52%);}
+.btn-main::after{content:'';position:absolute;top:1px;left:1px;right:1px;height:1px;background:rgba(255,255,255,0.42);}
+.btn-main:hover{transform:translateY(-2px);box-shadow:0 0 32px rgba(200,168,75,0.42),0 6px 22px rgba(0,0,0,0.75);}
+.btn-main:active{transform:translateY(1px) scale(0.98);}
+.btn-main:disabled{opacity:0.28;cursor:not-allowed;transform:none;}
+.btn-main.sp{animation:spinPulse 0.52s ease-in-out infinite alternate;}
+@keyframes spinPulse{from{box-shadow:0 0 12px rgba(200,168,75,0.25);}to{box-shadow:0 0 30px rgba(42,255,138,0.42);}}
+.btn-row{display:flex;gap:5px;}
+.btn-s{
+  padding:5px 11px;font-family:'Share Tech Mono',monospace;font-size:0.56rem;letter-spacing:1px;
+  color:var(--muted);background:rgba(255,255,255,0.028);border:1px solid rgba(255,255,255,0.07);
+  cursor:pointer;transition:all 0.2s;
+}
+.btn-s:hover{color:var(--gold);border-color:var(--border);}
+.btn-s.on{color:var(--ruby);border-color:rgba(255,58,110,0.38);background:rgba(255,58,110,0.055);}
+
+/* ─── WIN BANNER ─────────────────────────────── */
+#winBanner{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(0.72);
+  opacity:0;pointer-events:none;z-index:200;
+  text-align:center;transition:opacity 0.32s cubic-bezier(0.34,1.56,0.64,1),transform 0.32s cubic-bezier(0.34,1.56,0.64,1);
+}
+#winBanner.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+.wbm{font-family:'Orbitron',monospace;font-weight:900;font-size:1.75rem;letter-spacing:6px;display:block;color:var(--gold2);text-shadow:0 0 35px rgba(200,168,75,0.8),0 0 70px rgba(200,168,75,0.35);}
+.wbs{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.95rem;letter-spacing:4px;color:var(--text);display:block;margin-top:4px;opacity:0.78;}
+.wbc{font-family:'Share Tech Mono',monospace;font-size:0.66rem;letter-spacing:3px;display:block;margin-top:8px;text-shadow:0 0 10px rgba(42,255,138,0.5);}
+
+/* ─── LEVEL UP TOAST ─────────────────────────── */
+#lvlToast{
+  position:fixed;top:62px;right:16px;z-index:210;
+  background:linear-gradient(135deg,#131109,#0e0d0b);
+  border:1px solid rgba(42,255,138,0.38);
+  padding:9px 18px;
+  transform:translateX(115%);transition:transform 0.42s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 0 28px rgba(42,255,138,0.12);
+}
+#lvlToast.show{transform:translateX(0);}
+.lt-h{font-family:'Orbitron',monospace;font-size:0.62rem;letter-spacing:3px;color:var(--em);font-weight:700;}
+.lt-s{font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:2px;color:var(--muted);margin-top:2px;}
+
+/* ─── ACHIEVEMENT TOAST ─────────────────────── */
+#achToast{
+  position:fixed;top:115px;right:16px;z-index:210;
+  background:linear-gradient(135deg,#131109,#0e0d0b);
+  border:1px solid rgba(200,168,75,0.4);
+  padding:9px 18px;min-width:200px;
+  transform:translateX(115%);transition:transform 0.42s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 0 28px rgba(200,168,75,0.1);
+}
+#achToast.show{transform:translateX(0);}
+.at-h{font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--gold2);font-weight:700;}
+.at-n{font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:1px;color:var(--text);margin-top:2px;}
+.at-s{font-family:'Share Tech Mono',monospace;font-size:0.46rem;letter-spacing:1px;color:var(--muted);margin-top:1px;}
+
+/* ─── BONUS VAULT ─────────────────────────── */
+#vaultOverlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,0.93);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;
+  backdrop-filter:blur(5px);
+}
+#vaultOverlay.open{display:flex;animation:vIn 0.48s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes vIn{from{opacity:0;transform:scale(0.88);}to{opacity:1;transform:scale(1);}}
+.vt{font-family:'Orbitron',monospace;font-weight:900;font-size:1.4rem;letter-spacing:6px;color:var(--gold2);text-shadow:0 0 35px rgba(200,168,75,0.6);}
+.vs-row{display:flex;gap:18px;}
+.vs{
+  width:100px;height:128px;
+  background:linear-gradient(175deg,#1a1815,#100f0d);
+  border:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+  cursor:pointer;transition:all 0.28s ease;position:relative;overflow:hidden;
+}
+.vs::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(200,168,75,0.05) 0%,transparent 60%);}
+.vs:hover{transform:translateY(-7px);border-color:var(--gold);box-shadow:0 0 28px rgba(200,168,75,0.2);}
+.vs.rev{cursor:default;transform:none;}
+.vs .vi{font-size:1.9rem;}
+.vs .vl{font-family:'Share Tech Mono',monospace;font-size:0.46rem;letter-spacing:2px;color:var(--muted);}
+.v-res{font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;color:var(--gold2);text-align:center;text-shadow:0 0 18px rgba(200,168,75,0.5);min-height:1.4rem;}
+.v-close{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:3px;color:var(--muted);cursor:pointer;padding:7px 22px;border:1px solid rgba(255,255,255,0.06);transition:all 0.2s;display:none;}
+.v-close:hover{color:var(--gold);border-color:var(--border);}
+
+/* ─── PRESTIGE SCREEN ─────────────────────── */
+#ptScreen{
+  position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.97);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:15px;
+}
+#ptScreen.open{display:flex;animation:vIn 0.55s ease-out;}
+.pt-title{font-family:'Orbitron',monospace;font-weight:900;font-size:2.2rem;letter-spacing:8px;color:var(--gold2);text-shadow:0 0 55px rgba(200,168,75,0.7);}
+.pt-tier{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;letter-spacing:5px;color:var(--text);}
+.pt-bonus{font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:3px;color:var(--em);margin-top:6px;}
+.pt-reward{font-family:'Share Tech Mono',monospace;font-size:0.56rem;letter-spacing:2px;color:var(--gold);margin-top:4px;}
+.pt-btn{margin-top:18px;font-family:'Orbitron',monospace;font-size:0.62rem;letter-spacing:4px;color:var(--gold);border:1px solid var(--border);padding:10px 28px;cursor:pointer;transition:all 0.2s;}
+.pt-btn:hover{background:rgba(200,168,75,0.07);}
+
+/* ─── STAT TICKER ─────────────────────────── */
+#ticker{
+  flex-shrink:0;display:flex;gap:0;
+  border-top:1px solid var(--border2);
+  font-family:'Share Tech Mono',monospace;font-size:0.48rem;letter-spacing:2px;color:var(--muted);
+  overflow:hidden;background:rgba(0,0,0,0.3);
+}
+.ti{padding:3px 14px;border-right:1px solid var(--border2);white-space:nowrap;}
+.ti .tv{color:var(--gold2);}
+
+/* ─── ACHIEVEMENT TRACKER (Stats Panel) ─────── */
+#statsPanel{
+  position:fixed;right:-320px;top:0;bottom:0;width:310px;z-index:100;
+  background:linear-gradient(180deg,#0f0e0c,#090907);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transition:right 0.42s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:-20px 0 60px rgba(0,0,0,0.8);
+}
+#statsPanel.open{right:0;}
+.sp-hdr{
+  padding:12px 16px 10px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.sp-title{font-family:'Orbitron',monospace;font-size:0.58rem;letter-spacing:4px;color:var(--muted);}
+.sp-close{cursor:pointer;color:var(--muted);font-size:0.8rem;transition:color 0.2s;}
+.sp-close:hover{color:var(--gold);}
+.sp-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.sp-body::-webkit-scrollbar{width:2px;}
+.sp-body::-webkit-scrollbar-thumb{background:rgba(200,168,75,0.18);}
+.sp-section{margin-bottom:4px;}
+.sp-sec-lbl{font-family:'Share Tech Mono',monospace;font-size:0.44rem;letter-spacing:3px;color:var(--muted);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border2);}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;}
+.stat-row .sk{font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:1px;color:var(--dim);}
+.stat-row .sv{font-family:'Share Tech Mono',monospace;font-size:0.56rem;color:var(--gold2);}
+.ach-item{
+  display:flex;gap:8px;align-items:center;padding:6px 8px;
+  background:rgba(255,255,255,0.018);border:1px solid rgba(255,255,255,0.04);
+  transition:border-color 0.3s,background 0.3s;
+}
+.ach-item.earned{border-color:rgba(200,168,75,0.28);background:rgba(200,168,75,0.03);}
+.ach-icon{font-size:1.2rem;flex-shrink:0;}
+.ach-info{flex:1;}
+.ach-name{font-size:0.7rem;font-weight:600;color:var(--text);}
+.ach-item.earned .ach-name{color:var(--gold2);}
+.ach-desc{font-family:'Share Tech Mono',monospace;font-size:0.44rem;letter-spacing:1px;color:var(--muted);margin-top:1px;}
+.ach-lock{font-size:0.8rem;flex-shrink:0;opacity:0.25;}
+.ach-item.earned .ach-lock{opacity:0;}
+
+/* ─── SCREEN FLASH ─────────────────────────── */
+.sfl{position:fixed;inset:0;pointer-events:none;z-index:180;animation:sflFade 1s ease-out forwards;}
+@keyframes sflFade{from{opacity:1;}to{opacity:0;}}
+
+/* ─── HOT STREAK INDICATOR ─────────────────── */
+#hotStreak{
+  position:fixed;top:50%;left:20px;transform:translateY(-50%);
+  pointer-events:none;z-index:150;
+  font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:3px;
+  color:var(--ruby);font-weight:700;
+  writing-mode:vertical-rl;text-orientation:mixed;
+  opacity:0;transition:opacity 0.4s;
+  text-shadow:0 0 12px var(--ruby);
+}
+#hotStreak.show{opacity:1;animation:hotPulse 0.8s ease-in-out infinite alternate;}
+@keyframes hotPulse{from{text-shadow:0 0 8px var(--ruby);}to{text-shadow:0 0 22px var(--ruby2),0 0 40px rgba(255,58,110,0.4);}}
+</style>
+</head>
+<body>
+
+<div id="envLayer"></div>
+<div id="envFlash" id="envFlash"></div>
+<div id="sweep"></div>
+
+<!-- HOT STREAK SIDE LABEL -->
+<div id="hotStreak">🔥 HOT STREAK</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    NEON FORTUNE™
+    <em>OBSIDIAN EDITION V3 · PRIVATE HIGH-ROLLER ARCADE</em>
+  </div>
+  <div class="hdr-stats">
+    <div class="hs"><span class="v" id="hCR">500</span>CREDITS</div>
+    <div class="hs"><span class="v" id="hSP">0</span>SPINS</div>
+    <div class="hs"><span class="v" id="hLV">1</span>LEVEL</div>
+    <div class="hs"><span class="v" id="hST">0</span>STREAK</div>
+    <div class="hs"><span class="v" id="hBW">0</span>BIG WINS</div>
+    <div class="hs"><span class="v" id="hJP">0</span>JACKPOTS</div>
+    <div class="hs"><span class="v" id="hWR">—</span>WIN RATE</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn-s" id="btnStats" style="font-size:0.52rem;">◈ STATS</button>
+    <div class="pt-badge" id="ptBadge">PRESTIGE 0 · STANDARD</div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+  <!-- OBJECTIVES -->
+  <div id="objBar">
+    <div class="oc" id="oc0"><div class="oc-lbl">OBJECTIVE I</div><div class="oc-txt" id="oc0t">—</div><div class="oc-prog"><div class="oc-fill" id="oc0f" style="width:0%"></div></div><div class="oc-rew" id="oc0r">—</div></div>
+    <div class="oc" id="oc1"><div class="oc-lbl">OBJECTIVE II</div><div class="oc-txt" id="oc1t">—</div><div class="oc-prog"><div class="oc-fill" id="oc1f" style="width:0%"></div></div><div class="oc-rew" id="oc1r">—</div></div>
+    <div class="oc" id="oc2"><div class="oc-lbl">OBJECTIVE III</div><div class="oc-txt" id="oc2t">—</div><div class="oc-prog"><div class="oc-fill" id="oc2f" style="width:0%"></div></div><div class="oc-rew" id="oc2r">—</div></div>
+  </div>
+
+  <!-- REELS ROW -->
+  <div id="reelsRow">
+    <!-- REEL 0 -->
+    <div class="mach" id="m0">
+      <div class="mach-id">REEL · I</div>
+      <div class="ro">
+        <div class="gr" id="gr0"></div>
+        <div class="rw" id="rw0">
+          <div class="pl" id="pl0"></div>
+          <canvas class="rc" id="rc0" width="176" height="300"></canvas>
+          <div class="rs" id="rs0"></div>
+        </div>
+      </div>
+      <div class="rb" id="rb0">◈ READY</div>
+    </div>
+
+    <!-- WIN EVALUATOR -->
+    <div id="winEval">
+      <div class="mc" id="mcL"></div>
+      <div class="combo-num" id="comboNum">×1</div>
+      <div class="combo-lbl">COMBO</div>
+      <div class="streak-wrap" style="margin-top:6px;">
+        <div class="streak-lbl">STREAK</div>
+        <div class="streak-pips" id="spips"></div>
+      </div>
+      <div class="mc" id="mcR" style="margin-top:6px;"></div>
+    </div>
+
+    <!-- REEL 1 -->
+    <div class="mach" id="m1">
+      <div class="mach-id">REEL · II</div>
+      <div class="ro">
+        <div class="gr" id="gr1"></div>
+        <div class="rw" id="rw1">
+          <div class="pl" id="pl1"></div>
+          <canvas class="rc" id="rc1" width="176" height="300"></canvas>
+          <div class="rs" id="rs1"></div>
+        </div>
+      </div>
+      <div class="rb" id="rb1">◈ READY</div>
+    </div>
+
+    <!-- REEL 2 -->
+    <div class="mach" id="m2">
+      <div class="mach-id">REEL · III</div>
+      <div class="ro">
+        <div class="gr" id="gr2"></div>
+        <div class="rw" id="rw2">
+          <div class="pl" id="pl2"></div>
+          <canvas class="rc" id="rc2" width="176" height="300"></canvas>
+          <div class="rs" id="rs2"></div>
+        </div>
+      </div>
+      <div class="rb" id="rb2">◈ READY</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM PANEL -->
+  <div id="bot">
+    <div id="meters">
+      <div class="mb">
+        <div class="mb-lbl">LUCK METER</div>
+        <div class="mb-bar"><div class="mb-fill luck" id="lkFill" style="width:0%"></div></div>
+        <div class="mb-val"><span class="hi" id="lkVal">0</span> / 100</div>
+      </div>
+      <div class="mb">
+        <div class="mb-lbl">XP PROGRESS</div>
+        <div class="mb-bar"><div class="mb-fill xp" id="xpFill" style="width:0%"></div></div>
+        <div class="mb-val"><span class="hi" id="xpVal">0</span> · NEXT <span id="xpNxt">100</span></div>
+      </div>
+      <div class="mb">
+        <div class="mb-lbl">COMBO CHAIN</div>
+        <div class="mb-bar"><div class="mb-fill combo" id="cmbFill" style="width:0%"></div></div>
+        <div class="mb-val">CHAIN <span class="hi" id="cmbVal">×1</span> · BEST <span id="cmbBest">×1</span></div>
+      </div>
+      <div class="mb">
+        <div class="mb-lbl">HOT METER</div>
+        <div class="mb-bar"><div class="mb-fill hot" id="hotFill" style="width:0%"></div></div>
+        <div class="mb-val">HEAT <span class="hi" id="hotVal">0</span>% · <span id="hotStatus">COOL</span></div>
+      </div>
+      <div class="mb" style="flex:1.5;">
+        <div class="mb-lbl">SESSION STATS</div>
+        <div class="mb-val" style="font-size:0.48rem;line-height:1.9;">
+          WINS <span class="hi" id="sW">0</span> &nbsp;|&nbsp; LOSSES <span class="hi" id="sL">0</span> &nbsp;|&nbsp; BONUS <span class="hi" id="sB">0</span> &nbsp;|&nbsp; BEST STREAK <span class="hi" id="sBst">0</span> &nbsp;|&nbsp; CR EARNED <span class="hi" id="sCR">0</span>
+        </div>
+      </div>
+    </div>
+    <div id="ctrl">
+      <button class="btn-main" id="btnSpin">◈ SPIN ALL ◈</button>
+      <div class="btn-row">
+        <button class="btn-s" id="btnAuto">⟳ AUTO</button>
+        <button class="btn-s" id="btnTurbo">⚡ TURBO</button>
+        <button class="btn-s" id="btnNewObj">↺ REFRESH OBJ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div id="ticker">
+    <div class="ti">PT BONUS <span class="tv" id="tkPT">+0.0%</span></div>
+    <div class="ti">TOTAL SPINS <span class="tv" id="tkTS">0</span></div>
+    <div class="ti">JACKPOTS <span class="tv" id="tkJP">0</span></div>
+    <div class="ti">BEST COMBO <span class="tv" id="tkBC">×1</span></div>
+    <div class="ti">LUCK TRIGGERS <span class="tv" id="tkLT">0</span></div>
+    <div class="ti">BONUS ROUNDS <span class="tv" id="tkBR">0</span></div>
+    <div class="ti">ACHIEVEMENTS <span class="tv" id="tkAC">0</span></div>
+    <div class="ti">SESSION XP <span class="tv" id="tkXP">0</span></div>
+  </div>
+</main>
+
+<!-- WIN BANNER -->
+<div id="winBanner">
+  <span class="wbm" id="wbm">—</span>
+  <span class="wbs" id="wbs">—</span>
+  <span class="wbc" id="wbc" style="color:var(--em)">—</span>
+</div>
+
+<!-- LEVEL UP TOAST -->
+<div id="lvlToast"><div class="lt-h" id="ltH">LEVEL UP</div><div class="lt-s" id="ltS">—</div></div>
+
+<!-- ACHIEVEMENT TOAST -->
+<div id="achToast"><div class="at-h">✦ ACHIEVEMENT</div><div class="at-n" id="atN">—</div><div class="at-s" id="atS">—</div></div>
+
+<!-- BONUS VAULT -->
+<div id="vaultOverlay">
+  <div class="vt">✦ GOLD VAULT ✦</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.85rem;letter-spacing:4px;color:var(--muted);">Select a safe to claim your reward</div>
+  <div class="vs-row">
+    <div class="vs" id="vs0"><div class="vi">🔐</div><div class="vl">VAULT I</div></div>
+    <div class="vs" id="vs1"><div class="vi">🔐</div><div class="vl">VAULT II</div></div>
+    <div class="vs" id="vs2"><div class="vi">🔐</div><div class="vl">VAULT III</div></div>
+  </div>
+  <div class="v-res" id="vRes"></div>
+  <div class="v-close" id="vClose">◈ COLLECT &amp; CONTINUE ◈</div>
+</div>
+
+<!-- PRESTIGE SCREEN -->
+<div id="ptScreen">
+  <div class="pt-title" id="ptTitle">✦ PRESTIGE ✦</div>
+  <div class="pt-tier" id="ptTier">—</div>
+  <div class="pt-bonus" id="ptBonus">—</div>
+  <div class="pt-reward" id="ptReward">—</div>
+  <button class="pt-btn" id="ptClaim">◈ CLAIM PRESTIGE ◈</button>
+</div>
+
+<!-- STATS PANEL (slide-in) -->
+<div id="statsPanel">
+  <div class="sp-hdr">
+    <div class="sp-title">◈ HIGH ROLLER DOSSIER</div>
+    <div class="sp-close" id="spClose">✕</div>
+  </div>
+  <div class="sp-body" id="spBody"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   NEON FORTUNE™ — OBSIDIAN EDITION V3
+   FULL ENGINE — PRODUCTION BUILD
+   ═══════════════════════════════════════════════ */
+'use strict';
+
+/* ━━━ SYMBOL ENGINE ━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const SYMS=[
+  {id:'cherry',  icon:'🍒',name:'Cherry',       tier:'LOW',   mult:1,  xb:8,   cb:3,  wt:20},
+  {id:'lemon',   icon:'🍋',name:'Lemon',         tier:'LOW',   mult:1,  xb:8,   cb:3,  wt:18},
+  {id:'bell',    icon:'🔔',name:'Bell',          tier:'LOW',   mult:2,  xb:10,  cb:4,  wt:16},
+  {id:'seven',   icon:'7️⃣',name:'Lucky Seven',  tier:'LOW',   mult:2,  xb:12,  cb:5,  wt:14},
+  {id:'bar',     icon:'🥇',name:'Gold Bar',      tier:'MID',   mult:4,  xb:18,  cb:12, wt:10},
+  {id:'crown',   icon:'👑',name:'Crown',         tier:'MID',   mult:5,  xb:24,  cb:16, wt:8 },
+  {id:'emerald', icon:'💚',name:'Emerald',       tier:'MID',   mult:6,  xb:30,  cb:20, wt:7 },
+  {id:'diamond', icon:'💎',name:'Diamond',       tier:'HIGH',  mult:10, xb:55,  cb:40, wt:4 },
+  {id:'ruby',    icon:'❤️',name:'Ruby',          tier:'HIGH',  mult:12, xb:70,  cb:55, wt:3 },
+  {id:'wild',    icon:'⭐',name:'Wild',          tier:'WILD',  mult:15, xb:90,  cb:70, wt:2 },
+  {id:'scatter', icon:'💠',name:'Scatter',       tier:'SCATTER',mult:0, xb:80,  cb:0,  wt:2 },
+  {id:'jackpot', icon:'🏆',name:'Jackpot',       tier:'JACKPOT',mult:50,xb:200, cb:250,wt:1 },
+];
+const SYM_MAP=Object.fromEntries(SYMS.map(s=>[s.id,s]));
+
+/* ━━━ PROBABILITY ENGINE ━━━━━━━━━━━━━━━━━━━━━ */
+let _poolNorm=null,_poolLuck=null;
+function buildPools(){
+  _poolNorm=[]; _poolLuck=[];
+  for(const s of SYMS){
+    for(let i=0;i<s.wt;i++) _poolNorm.push(s);
+    const lw=s.wt+((s.tier==='MID'||s.tier==='HIGH'||s.tier==='WILD')?3:0);
+    for(let i=0;i<lw;i++) _poolLuck.push(s);
+  }
+}
+buildPools();
+function randSym(luck){const p=luck?_poolLuck:_poolNorm;return p[p.length*Math.random()|0];}
+
+/* Near-miss logic: 15% chance 2 reels match, 3rd deliberately differs */
+function pickSymbols(luckMeter){
+  const luck=luckMeter>=100;
+  const s0=randSym(luck);
+  let s1=randSym(luck);
+  let s2=randSym(luck);
+  if(Math.random()<0.15){
+    s1=SYM_MAP[s0.id];
+    const others=SYMS.filter(s=>s.id!==s0.id);
+    s2=others[others.length*Math.random()|0];
+  }
+  return [s0,s1,s2];
+}
+
+/* ━━━ WIN RESOLVER ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function resolveWin(syms){
+  const[a,b,c]=syms;
+  const isW=s=>s.id==='wild';
+  const m=(x,y)=>x.id===y.id||isW(x)||isW(y);
+  if(a.id==='jackpot'&&b.id==='jackpot'&&c.id==='jackpot') return 'jackpot';
+  if([a,b,c].some(s=>s.id==='scatter')) return 'bonus';
+  if(m(a,b)&&m(b,c)){
+    const ref=isW(a)?isW(b)?c:b:a;
+    if(ref.tier==='HIGH'||ref.tier==='WILD') return 'big';
+    if(ref.tier==='MID') return 'medium';
+    return 'small';
+  }
+  return 'loss';
+}
+
+/* ━━━ REEL STRIP ENGINE ━━━━━━━━━━━━━━━━━━━━━━ */
+const ITEM_H=50;
+const NREELS=3;
+const STRIP_TEMPLATE=(()=>{
+  const base=[];
+  for(const s of SYMS) for(let i=0;i<s.wt;i++) base.push(s);
+  const full=[];
+  for(let r=0;r<4;r++) for(const s of base) full.push(s);
+  return full;
+})();
+const STRIP_H=STRIP_TEMPLATE.length*ITEM_H;
+
+const reelOffsets=[0,0,0];
+
+function buildReelStrip(idx){
+  const el=document.getElementById('rs'+idx);
+  el.innerHTML='';
+  for(const s of STRIP_TEMPLATE){
+    const d=document.createElement('div');
+    d.className='ri';
+    d.innerHTML=`<span class="ri-icon">${s.icon}</span><div class="ri-info"><div class="ri-name">${s.name}</div><div class="ri-tier">${s.tier}</div></div><span class="ri-mult">${s.mult>0?s.mult+'x':'✦'}</span>`;
+    el.appendChild(d);
+  }
+  const start=Math.floor(STRIP_TEMPLATE.length/3)*ITEM_H;
+  reelOffsets[idx]=start;
+  el.style.transform=`translateY(${-start}px)`;
+}
+for(let i=0;i<NREELS;i++) buildReelStrip(i);
+
+/* ━━━ PARTICLE ENGINE (pooled) ━━━━━━━━━━━━━━━ */
+const CTX=[];
+for(let i=0;i<NREELS;i++) CTX.push(document.getElementById('rc'+i).getContext('2d'));
+const PART_POOL=[[],[],[]];
+const MAX_P=100;
+
+const PART_PAL={
+  loss:   ['rgba(102,95,80,0.45)'],
+  small:  ['#c8a84b','#e8c96a'],
+  medium: ['#2aff8a','#00c96e','#c8a84b'],
+  big:    ['#e8c96a','#f5e0a0','#2aff8a','#4ac8ff'],
+  jackpot:['#ff3a6e','#e8c96a','#f5e0a0','#2aff8a','#ffffff','#4ac8ff'],
+};
+const PART_N={loss:4,small:16,medium:30,big:52,jackpot:MAX_P};
+
+function spawnParts(ri,type){
+  const pool=PART_POOL[ri];
+  const cv=CTX[ri].canvas;
+  const cx=cv.width/2,cy=cv.height/2;
+  const pal=PART_PAL[type]||PART_PAL.small;
+  const n=Math.min(PART_N[type]||18,MAX_P-pool.length);
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,sp=1.1+Math.random()*4.2;
+    pool.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.1,life:1,decay:0.015+Math.random()*0.025,sz:1.4+Math.random()*3.2,col:pal[pal.length*Math.random()|0]});
+  }
+}
+
+let partLoop=null;
+function runParticles(){
+  for(let ri=0;ri<NREELS;ri++){
+    const c=CTX[ri],pool=PART_POOL[ri],cv=c.canvas;
+    c.clearRect(0,0,cv.width,cv.height);
+    let i=pool.length;
+    while(i--){
+      const p=pool[i];
+      c.save();c.globalAlpha=Math.max(0,p.life);c.fillStyle=p.col;
+      c.shadowBlur=7;c.shadowColor=p.col;
+      c.beginPath();c.arc(p.x,p.y,Math.max(0.1,p.sz*p.life),0,6.2832);c.fill();
+      c.restore();
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.06;p.life-=p.decay;
+      if(p.life<=0) pool.splice(i,1);
+    }
+  }
+  partLoop=requestAnimationFrame(runParticles);
+}
+runParticles();
+
+/* ━━━ PERSISTENCE LAYER ━━━━━━━━━━━━━━━━━━━━━━ */
+const SK_STATE='nf_v3_s';
+const SK_STATS='nf_v3_t';
+const SK_ACH='nf_v3_a';
+
+function defState(){return{credits:500,xp:0,level:1,prestige:0,luckMeter:0,combo:1,streak:0,hotMeter:0,spins:0};}
+function defStats(){return{spins:0,wins:0,losses:0,bigs:0,jacks:0,bonus:0,luckTrig:0,bestStreak:0,bestCombo:1,crEarned:0,sessionXP:0,nearMisses:0};}
+function defAch(){return{};}
+
+function sLoad(k,d){try{const r=localStorage.getItem(k);if(r){const p=JSON.parse(r);return Object.assign(d(),p);}return d();}catch(e){return d();}}
+function sSave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+let S=sLoad(SK_STATE,defState);
+let T=sLoad(SK_STATS,defStats);
+let A=sLoad(SK_ACH,defAch);
+// Credit overflow protection
+S.credits=Math.min(S.credits,999999);
+// Validate numeric fields
+['credits','xp','level','prestige','luckMeter','combo','streak','hotMeter','spins'].forEach(k=>{if(typeof S[k]!=='number'||isNaN(S[k]))S[k]=defState()[k];});
+
+function persist(){sSave(SK_STATE,S);sSave(SK_STATS,T);sSave(SK_ACH,A);}
+
+/* ━━━ XP & PROGRESSION ENGINE ━━━━━━━━━━━━━━━━ */
+function xpFor(lvl){
+  if(lvl<=10)  return 50+(lvl-1)*15;
+  if(lvl<=25)  return 200+(lvl-10)*25;
+  if(lvl<=49)  return 575+(lvl-25)*30;
+  return 1200;
+}
+
+function giveXP(amt){
+  S.xp+=amt;T.sessionXP+=amt;
+  while(S.xp>=xpFor(S.level)&&S.level<50){
+    S.xp-=xpFor(S.level);
+    S.level++;
+    fireLevelUp(S.level);
+  }
+  if(S.level>=50&&!prestigePending) triggerPrestige();
+}
+
+function fireLevelUp(lvl){
+  const t=document.getElementById('lvlToast');
+  document.getElementById('ltH').textContent=`LEVEL UP — LVL ${lvl}`;
+  document.getElementById('ltS').textContent=levelReward(lvl);
+  t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3400);
+  screenFlash('rgba(42,255,138,0.11)');
+  checkAchievements();
+}
+
+function levelReward(lvl){
+  if(lvl===10) return 'GOLD ACCENT THEME UNLOCKED';
+  if(lvl===20) return 'DIAMOND WILD ANIMATION UNLOCKED';
+  if(lvl===30) return 'CASCADING MODE UNLOCKED';
+  if(lvl===40) return 'ELITE BONUS WHEEL UNLOCKED';
+  if(lvl===50) return 'PRESTIGE READY — ASCEND NOW';
+  return `+${lvl}% COMBO CHANCE BONUS ACTIVE`;
+}
+
+/* ━━━ PRESTIGE SYSTEM ━━━━━━━━━━━━━━━━━━━━━━━━ */
+const PT_TIERS=[
+  {name:'STANDARD',   glow:'rgba(200,168,75,0.1)',  trim:'#c8a84b', desc:'The journey begins.'},
+  {name:'GOLD',       glow:'rgba(200,168,75,0.2)',  trim:'#e8c96a', desc:'Fortune smiles upon you.'},
+  {name:'EMERALD',    glow:'rgba(42,255,138,0.16)', trim:'#2aff8a', desc:'The emerald vault opens.'},
+  {name:'SAPPHIRE',   glow:'rgba(74,200,255,0.16)', trim:'#4ac8ff', desc:'Blue fire runs through the reels.'},
+  {name:'PLATINUM',   glow:'rgba(210,210,200,0.18)',trim:'#d8d8c8', desc:'Rarity beyond rarity.'},
+  {name:'RUBY',       glow:'rgba(255,58,110,0.16)', trim:'#ff3a6e', desc:'Blood and gold.'},
+  {name:'OBSIDIAN',   glow:'rgba(160,80,255,0.16)', trim:'#a050ff', desc:'Darkness holds the highest prize.'},
+  {name:'DIAMOND',    glow:'rgba(180,230,255,0.2)', trim:'#b4e6ff', desc:'Clarity. Perfection. Light.'},
+  {name:'ROYAL',      glow:'rgba(200,168,75,0.32)', trim:'#f5e0a0', desc:'The court recognises your name.'},
+  {name:'CELESTIAL',  glow:'rgba(255,200,50,0.38)', trim:'#ffe050', desc:'You have reached the stars.'},
+];
+function ptTier(p){return PT_TIERS[Math.min(p,PT_TIERS.length-1)];}
+function ptMult(p){return 1+(p*0.005);}
+
+function applyTheme(){
+  const t=ptTier(S.prestige);
+  document.documentElement.style.setProperty('--pt-glow',t.glow);
+  document.documentElement.style.setProperty('--pt-trim',t.trim);
+  document.documentElement.style.setProperty('--pt-accent',t.trim);
+  document.getElementById('ptBadge').textContent=`PRESTIGE ${S.prestige} · ${t.name}`;
+}
+
+let prestigePending=false;
+function triggerPrestige(){
+  if(prestigePending) return;
+  prestigePending=true;
+  const next=ptTier(S.prestige+1);
+  document.getElementById('ptTitle').textContent=`✦ PRESTIGE ${S.prestige+1} ✦`;
+  document.getElementById('ptTier').textContent=`${next.name} TIER — "${next.desc}"`;
+  document.getElementById('ptBonus').textContent=`+${((S.prestige+1)*0.5).toFixed(1)}% PERMANENT REWARD MULTIPLIER`;
+  document.getElementById('ptReward').textContent=`CREDITS PRESERVED · COSMETIC TIER UPGRADED`;
+  document.getElementById('ptScreen').classList.add('open');
+}
+
+document.getElementById('ptClaim').addEventListener('click',()=>{
+  S.prestige++;
+  S.level=1;S.xp=0;
+  if(S.credits<500) S.credits=500;
+  prestigePending=false;
+  document.getElementById('ptScreen').classList.remove('open');
+  applyTheme();
+  screenFlash('rgba(200,168,75,0.28)');
+  checkAchievements();
+  updateUI();persist();
+});
+
+/* ━━━ LUCK METER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function chargeLuck(wt){
+  const was=S.luckMeter;
+  const delta={loss:14,small:6,medium:-20,big:-100,jackpot:-100,bonus:-20}[wt]||0;
+  S.luckMeter=Math.max(0,Math.min(100,S.luckMeter+delta));
+  if(was<100&&S.luckMeter>=100) T.luckTrig++;
+}
+
+/* ━━━ HOT METER (NEW SYSTEM 1) ━━━━━━━━━━━━━━━
+   Fills on consecutive wins. At 100% → bonus multiplier burst.
+   Visual: amber/orange gradient, side label appears.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function updateHotMeter(wt){
+  if(wt!=='loss') S.hotMeter=Math.min(100,S.hotMeter+18);
+  else S.hotMeter=Math.max(0,S.hotMeter-25);
+  document.getElementById('hotStreak').classList.toggle('show',S.hotMeter>=80);
+}
+function hotBonus(){return S.hotMeter>=100?1.25:S.hotMeter>=75?1.1:1;}
+
+/* ━━━ COMBO CHAIN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const CMB_TIERS=[1,1.5,2,3,5,7,10];
+function cmbMult(c){return CMB_TIERS[Math.min(c-1,CMB_TIERS.length-1)];}
+
+function advanceCombo(win){
+  if(win){
+    S.combo=Math.min(S.combo+1,7);
+    S.streak++;T.wins++;
+    if(S.streak>T.bestStreak) T.bestStreak=S.streak;
+    if(S.combo>T.bestCombo) T.bestCombo=S.combo;
+  } else {
+    S.combo=1;S.streak=0;T.losses++;
+  }
+}
+
+/* ━━━ REWARD ENGINE ━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function calcReward(syms,wt){
+  if(wt==='loss') return{cr:1,xp:5};
+  const ref=syms[1].id==='wild'?syms[0]:syms[1];
+  const pm=ptMult(S.prestige);
+  const cm=cmbMult(S.combo);
+  const lk=S.luckMeter>=100?1.5:1;
+  const hk=hotBonus();
+  const cr=Math.min(Math.round(ref.cb*cm*pm*lk*hk),9999);
+  const xp=Math.min(Math.round(ref.xb*cm*pm),2000);
+  return{cr,xp};
+}
+
+/* ━━━ SESSION OBJECTIVES ENGINE ━━━━━━━━━━━━━━ */
+const OBJ_TMPL=[
+  {k:'wins',   txt:'Win {n} times',              ts:[3,5,8],  rew:n=>`+${n*20}CR +${n*30}XP`},
+  {k:'spins',  txt:'Complete {n} spins',          ts:[10,20,35],rew:n=>`+${n*5}CR`},
+  {k:'streak', txt:'Reach a {n}-win streak',      ts:[2,3,5],  rew:n=>`+${n*25}CR`},
+  {k:'luck',   txt:'Fill Luck Meter {n} times',   ts:[1,2,3],  rew:n=>`+${n*45}XP`},
+  {k:'mid',    txt:'Land {n} Mid symbols',         ts:[3,5,8],  rew:n=>`+${n*15}CR`},
+  {k:'high',   txt:'Land {n} High/Wild symbols',  ts:[1,2,4],  rew:n=>`+${n*55}CR +${n*60}XP`},
+  {k:'combo',  txt:'Reach ×{n} combo',            ts:[2,3,5],  rew:n=>`+${n*30}CR`},
+  {k:'jackpot',txt:'Hit {n} jackpot(s)',           ts:[1,1,2],  rew:n=>`+${n*200}XP`},
+  {k:'hot',    txt:'Fill Hot Meter {n} times',    ts:[1,2,3],  rew:n=>`+${n*40}CR`},
+  {k:'bonus',  txt:'Trigger {n} bonus round(s)',  ts:[1,2,3],  rew:n=>`+${n*60}CR +${n*50}XP`},
+];
+let objs=[],objProg=[0,0,0];
+let hotFull=0;
+
+function rollObjs(){
+  objs=[];objProg=[0,0,0];hotFull=0;
+  const pool=[...OBJ_TMPL].sort(()=>Math.random()-0.5);
+  for(let i=0;i<3;i++){
+    const t=pool[i];
+    const ti=Math.floor(Math.random()*t.ts.length);
+    const n=t.ts[ti];
+    objs.push({k:t.k,txt:t.txt.replace('{n}',n),n,rew:t.rew(n),done:false});
+  }
+  renderObjs();
+}
+rollObjs();
+
+function renderObjs(){
+  for(let i=0;i<3;i++){
+    const o=objs[i];
+    document.getElementById('oc'+i+'t').textContent=o.txt;
+    document.getElementById('oc'+i+'r').textContent=o.rew;
+    document.getElementById('oc'+i+'f').style.width=Math.min(100,Math.round(objProg[i]/o.n*100))+'%';
+    document.getElementById('oc'+i).classList.toggle('done',o.done);
+  }
+}
+
+function tickObjs(syms,wt){
+  for(let i=0;i<3;i++){
+    const o=objs[i];if(o.done) continue;
+    let inc=0;
+    if(o.k==='wins'&&wt!=='loss') inc=1;
+    if(o.k==='spins') inc=1;
+    if(o.k==='streak'&&S.streak>=o.n){objProg[i]=o.n;}
+    if(o.k==='luck'&&S.luckMeter>=100) inc=1;
+    if(o.k==='mid'&&syms.some(s=>s.tier==='MID')) inc=1;
+    if(o.k==='high'&&syms.some(s=>s.tier==='HIGH'||s.tier==='WILD')) inc=1;
+    if(o.k==='combo'&&S.combo>=o.n){objProg[i]=o.n;}
+    if(o.k==='jackpot'&&wt==='jackpot') inc=1;
+    if(o.k==='hot'&&S.hotMeter>=100){inc=1;S.hotMeter=0;}
+    if(o.k==='bonus'&&wt==='bonus') inc=1;
+    if(o.k!=='streak'&&o.k!=='combo') objProg[i]+=inc;
+    if(objProg[i]>=o.n&&!o.done){o.done=true;awardObj(i,o);}
+  }
+  renderObjs();
+}
+
+function awardObj(i,o){
+  const crM=o.rew.match(/\+(\d+)CR/);const xpM=o.rew.match(/\+(\d+)XP/);
+  if(crM){const v=+crM[1];S.credits+=v;T.crEarned+=v;}
+  if(xpM) giveXP(+xpM[1]);
+  screenFlash('rgba(42,255,138,0.08)');
+  showBanner('OBJECTIVE COMPLETE',o.txt,o.rew,'#2aff8a');
+}
+
+document.getElementById('btnNewObj').addEventListener('click',rollObjs);
+
+/* ━━━ ACHIEVEMENT SYSTEM (NEW SYSTEM 2) ━━━━━━
+   Persistent achievements. Fire once. Display in stats panel.
+   Each has: id, icon, name, desc, condition fn.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const ACH_DEF=[
+  {id:'first_spin', icon:'🎰',name:'First Spin',      desc:'Take your first spin.',               cond:()=>T.spins>=1},
+  {id:'spin10',     icon:'🔟',name:'Seasoned Roller',  desc:'Complete 10 spins.',                  cond:()=>T.spins>=10},
+  {id:'spin100',    icon:'💯',name:'Centurion',         desc:'Complete 100 spins.',                 cond:()=>T.spins>=100},
+  {id:'spin1000',   icon:'⚡',name:'Obsidian Veteran', desc:'Complete 1,000 spins.',               cond:()=>T.spins>=1000},
+  {id:'streak5',    icon:'🔥',name:'Hot Streak',       desc:'Achieve a 5-win streak.',             cond:()=>T.bestStreak>=5},
+  {id:'streak10',   icon:'🌋',name:'Volcanic',         desc:'Achieve a 10-win streak.',            cond:()=>T.bestStreak>=10},
+  {id:'combo_max',  icon:'🌀',name:'Maximum Overdrive',desc:'Reach ×10 combo multiplier.',         cond:()=>T.bestCombo>=7},
+  {id:'jackpot1',   icon:'🏆',name:'The Vault Opens',  desc:'Hit your first jackpot.',             cond:()=>T.jacks>=1},
+  {id:'jackpot5',   icon:'👑',name:'Jackpot King',     desc:'Hit 5 jackpots.',                     cond:()=>T.jacks>=5},
+  {id:'prestige1',  icon:'✦', name:'Ascendant',        desc:'Complete your first prestige.',       cond:()=>S.prestige>=1},
+  {id:'prestige5',  icon:'💫',name:'Legendary',        desc:'Reach Prestige 5.',                   cond:()=>S.prestige>=5},
+  {id:'luck10',     icon:'🍀',name:'Fortune\'s Friend', desc:'Trigger Luck Meter 10 times.',       cond:()=>T.luckTrig>=10},
+  {id:'level25',    icon:'📈',name:'Rising Star',      desc:'Reach Level 25.',                     cond:()=>S.level>=25||S.prestige>=1},
+  {id:'level50',    icon:'🎖', name:'Elite Roller',    desc:'Reach Level 50.',                     cond:()=>S.level>=50||S.prestige>=1},
+  {id:'cr1000',     icon:'💰',name:'Credit Collector', desc:'Earn 1,000 total credits.',           cond:()=>T.crEarned>=1000},
+  {id:'cr10000',    icon:'🏦',name:'High Banker',      desc:'Earn 10,000 total credits.',          cond:()=>T.crEarned>=10000},
+  {id:'bonus10',    icon:'🔐',name:'Vault Raider',     desc:'Complete 10 bonus rounds.',           cond:()=>T.bonus>=10},
+  {id:'near50',     icon:'😤',name:'So Close',         desc:'Trigger 50 near misses.',             cond:()=>T.nearMisses>=50},
+];
+let _achPending=false;
+
+function checkAchievements(){
+  if(_achPending) return;
+  for(const ach of ACH_DEF){
+    if(!A[ach.id]&&ach.cond()){
+      A[ach.id]=Date.now();
+      T.crEarned; // already tracked
+      fireAchievement(ach);
+      _achPending=true;
+      break;
+    }
+  }
+}
+
+let _achQueue=[];
+function fireAchievement(ach){
+  _achQueue.push(ach);
+  if(!_achPending) flushAchQueue();
+}
+function flushAchQueue(){
+  if(!_achQueue.length){_achPending=false;return;}
+  const ach=_achQueue.shift();
+  const t=document.getElementById('achToast');
+  document.getElementById('atN').textContent=`${ach.icon} ${ach.name}`;
+  document.getElementById('atS').textContent=ach.desc;
+  t.classList.add('show');clearTimeout(t._t);
+  t._t=setTimeout(()=>{t.classList.remove('show');setTimeout(flushAchQueue,400);},3200);
+  persist();
+  renderStatsPanel();
+  // Update achievement count
+  document.getElementById('tkAC').textContent=Object.keys(A).length;
+}
+
+/* ━━━ BONUS VAULT ENGINE ━━━━━━━━━━━━━━━━━━━━━ */
+const VAULT_POOL=[
+  {i:'💰',l:'200 CREDITS',  cr:200,xp:0},
+  {i:'⭐',l:'300 XP BURST', cr:0,  xp:300},
+  {i:'🎯',l:'150 CR+150 XP',cr:150,xp:150},
+  {i:'🔥',l:'500 CREDITS',  cr:500,xp:0},
+  {i:'✨',l:'+500 XP STORM',cr:0,  xp:500},
+  {i:'💎',l:'250 CR+250 XP',cr:250,xp:250},
+  {i:'🏅',l:'1000 CREDITS', cr:1000,xp:0},
+  {i:'🌟',l:'750 XP',       cr:0,  xp:750},
+];
+let vaultOpen=false;
+let _vaultCB=null;
+
+function openVault(cb){
+  if(vaultOpen) return;
+  vaultOpen=true;_vaultCB=cb;T.bonus++;T.bonus;
+  const pool=[...VAULT_POOL].sort(()=>Math.random()-0.5).slice(0,3);
+  const vRes=document.getElementById('vRes');
+  const vClose=document.getElementById('vClose');
+  vRes.textContent='';vClose.style.display='none';
+  for(let i=0;i<3;i++){
+    const vs=document.getElementById('vs'+i);
+    vs.className='vs';
+    vs.innerHTML=`<div class="vi">🔐</div><div class="vl">VAULT ${['I','II','III'][i]}</div>`;
+    vs.dataset.r=JSON.stringify(pool[i]);
+    vs.onclick=null;
+  }
+  for(let i=0;i<3;i++){
+    (function(idx){
+      const vs=document.getElementById('vs'+idx);
+      vs.onclick=()=>{
+        const r=JSON.parse(vs.dataset.r);
+        vs.innerHTML=`<div class="vi">${r.i}</div><div class="vl" style="color:var(--gold)">${r.l}</div>`;
+        vs.classList.add('rev');
+        for(let j=0;j<3;j++) document.getElementById('vs'+j).onclick=null;
+        S.credits+=r.cr;T.crEarned+=r.cr;
+        if(r.xp) giveXP(r.xp);
+        vRes.textContent=`✦ ${r.l} CLAIMED ✦`;
+        vClose.style.display='block';
+        screenFlash('rgba(200,168,75,0.18)');spawnParts(1,'big');
+        checkAchievements();updateUI();persist();
+      };
+    })(i);
+  }
+  document.getElementById('vaultOverlay').classList.add('open');
+}
+
+document.getElementById('vClose').addEventListener('click',()=>{
+  document.getElementById('vaultOverlay').classList.remove('open');
+  vaultOpen=false;
+  if(_vaultCB){_vaultCB();_vaultCB=null;}
+});
+
+/* ━━━ REEL ANIMATION ENGINE ━━━━━━━━━━━━━━━━━━ */
+function easeOutCubic(t){return 1-Math.pow(1-t,3);}
+function easeOutQuint(t){return 1-Math.pow(1-t,5);}
+
+const activeRAFs=[null,null,null];
+
+function getTargetOffset(sym,ri){
+  const mid=STRIP_TEMPLATE.length>>1;
+  for(let i=mid;i<STRIP_TEMPLATE.length;i++){
+    if(STRIP_TEMPLATE[i].id===sym.id) return i*ITEM_H-(300/2)+ITEM_H/2;
+  }
+  return mid*ITEM_H;
+}
+
+/* Cinematic tension curve: fast first 65%, dramatic decel last 35% */
+function animReel(ri,sym,dur,done){
+  if(activeRAFs[ri]) cancelAnimationFrame(activeRAFs[ri]);
+  const strip=document.getElementById('rs'+ri);
+  const gr=document.getElementById('gr'+ri);
+  gr.className='gr sp';
+  let tgt=getTargetOffset(sym,ri);
+  if(tgt<=reelOffsets[ri]) tgt+=STRIP_H;
+  const dist=tgt-reelOffsets[ri];
+  const start=reelOffsets[ri];
+  let t0=null;
+  function frame(ts){
+    if(!t0) t0=ts;
+    const el=ts-t0;
+    const t=Math.min(el/dur,1);
+    const eased=t<0.65?easeOutCubic(t/0.65)*0.65:0.65+easeOutQuint((t-0.65)/0.35)*0.35;
+    const off=(start+dist*eased)%STRIP_H;
+    reelOffsets[ri]=off;
+    strip.style.transform=`translateY(${-off}px)`;
+    if(t<1){activeRAFs[ri]=requestAnimationFrame(frame);}
+    else{activeRAFs[ri]=null;gr.className='gr';done&&done();}
+  }
+  activeRAFs[ri]=requestAnimationFrame(frame);
+}
+
+/* ━━━ WIN PRESENTATION ENGINE ━━━━━━━━━━━━━━━━ */
+function flashItem(ri,type){
+  const strip=document.getElementById('rs'+ri);
+  const items=strip.querySelectorAll('.ri');
+  const ci=Math.round((reelOffsets[ri]+150-ITEM_H/2)/ITEM_H)%items.length;
+  const el=items[ci];
+  if(el){
+    el.classList.add(type==='jackpot'?'fj':'fw');
+    setTimeout(()=>el.classList.remove('fw','fj'),750);
+  }
+}
+
+function setPayline(i,cls){
+  const pl=document.getElementById('pl'+i);
+  pl.className='pl'+(cls?' '+cls:'');
+  if(cls) setTimeout(()=>{pl.className='pl';},1600);
+}
+function setMach(i,cls){
+  const m=document.getElementById('m'+i);
+  m.className='mach'+(cls?' '+cls:'');
+  if(cls) setTimeout(()=>{m.className='mach';},2100);
+}
+function setGlow(i,cls){
+  const gr=document.getElementById('gr'+i);
+  gr.className='gr'+(cls?' '+cls:'');
+  if(cls&&cls!=='sp') setTimeout(()=>{gr.className='gr';},2100);
+}
+function setBadge(i,txt,cls){
+  const b=document.getElementById('rb'+i);
+  b.textContent=txt;b.className='rb'+(cls?' '+cls:'');
+}
+
+function matchConnectors(syms){
+  const[a,b,c]=syms;
+  const iw=s=>s.id==='wild';
+  const m=(x,y)=>x.id===y.id||iw(x)||iw(y);
+  document.getElementById('mcL').className='mc'+(m(a,b)?' mch':'');
+  document.getElementById('mcR').className='mc'+(m(b,c)?' mch':'');
+}
+
+function updateStreak(){
+  const pips=document.getElementById('spips');
+  pips.innerHTML='';
+  const n=Math.max(5,S.streak+1);
+  for(let i=0;i<Math.min(n,10);i++){
+    const d=document.createElement('div');
+    d.className='pip'+(i<S.streak?S.streak>=5?' fire':' on':'');
+    pips.appendChild(d);
+  }
+}
+
+function updateCombo(){
+  const cm=cmbMult(S.combo);
+  const cn=document.getElementById('comboNum');
+  cn.textContent=`×${cm%1===0?cm:cm.toFixed(1)}`;
+  if(S.combo>1){cn.classList.add('bang');setTimeout(()=>cn.classList.remove('bang'),380);}
+  const pct=((S.combo-1)/(CMB_TIERS.length-1))*100;
+  document.getElementById('cmbFill').style.width=pct+'%';
+  document.getElementById('cmbVal').textContent=`×${cm%1===0?cm:cm.toFixed(1)}`;
+  document.getElementById('cmbBest').textContent=`×${CMB_TIERS[Math.min(T.bestCombo-1,CMB_TIERS.length-1)]}`;
+}
+
+/* Win banner with layered animation */
+function showBanner(main,sub,cred,color){
+  color=color||'var(--gold2)';
+  const wb=document.getElementById('winBanner');
+  document.getElementById('wbm').textContent=main;
+  document.getElementById('wbm').style.color=color;
+  document.getElementById('wbs').textContent=sub;
+  document.getElementById('wbc').textContent=cred;
+  document.getElementById('wbc').style.color=color==='var(--gold2)'?'var(--em)':color;
+  wb.classList.add('show');
+  clearTimeout(wb._t);wb._t=setTimeout(()=>wb.classList.remove('show'),2900);
+}
+
+/* ━━━ ENVIRONMENT REACTIVE BACKGROUND ━━━━━━━━ */
+const envFlashEl=document.getElementById('envFlash');
+const envColors={loss:'none',small:'rgba(200,168,75,0.06)',medium:'rgba(42,255,138,0.07)',big:'rgba(200,168,75,0.1)',jackpot:'rgba(255,58,110,0.12)',bonus:'rgba(74,200,255,0.08)'};
+let envTimer=null;
+function pulseEnv(wt){
+  if(wt==='loss') return;
+  envFlashEl.style.background=`radial-gradient(ellipse at 50% 40%,${envColors[wt]||'transparent'} 0%,transparent 65%)`;
+  envFlashEl.style.opacity='1';
+  clearTimeout(envTimer);
+  envTimer=setTimeout(()=>{envFlashEl.style.opacity='0';},1200);
+}
+
+/* Screen flash DOM element */
+function screenFlash(bg){
+  const d=document.createElement('div');d.className='sfl';
+  d.style.background=`radial-gradient(ellipse at center,${bg} 0%,transparent 65%)`;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),1050);
+}
+
+/* ━━━ NEAR MISS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function addNearMiss(ri){
+  T.nearMisses++;
+  const rw=document.getElementById('rw'+ri);
+  const nm=document.createElement('div');nm.className='nm';
+  rw.appendChild(nm);setTimeout(()=>nm.remove(),950);
+}
+
+/* ━━━ SPIN CONTROLLER ━━━━━━━━━━━━━━━━━━━━━━━━ */
+let locked=false,autoMode=false,turboMode=false,autoTmr=null;
+
+function doSpin(){
+  if(locked||vaultOpen||prestigePending) return;
+  if(S.credits<1){S.credits=100;updateUI();return;}
+  locked=true;
+  S.credits--;S.spins++;T.spins++;
+  const btn=document.getElementById('btnSpin');
+  btn.disabled=true;btn.classList.add('sp');
+
+  const syms=pickSymbols(S.luckMeter);
+  const wt=resolveWin(syms);
+  const base=turboMode?360:1150;
+  const delays=turboMode?[0,80,160]:[0,180,360];
+  let done=0;
+
+  function onDone(){if(++done===NREELS) setTimeout(()=>finalize(syms,wt),turboMode?70:180);}
+  for(let i=0;i<NREELS;i++) animReel(i,syms[i],base+delays[i],onDone);
+}
+
+function finalize(syms,wt){
+  const lkFull=S.luckMeter>=100;
+  chargeLuck(wt);
+  updateHotMeter(wt);
+  advanceCombo(wt!=='loss');
+  const{cr,xp}=calcReward(syms,wt);
+  S.credits=Math.min(S.credits+cr,999999);
+  if(cr>0) T.crEarned+=cr;
+  giveXP(xp);
+
+  // Per-reel presentation
+  for(let i=0;i<NREELS;i++){
+    const fc=wt==='jackpot'?'jackpot':'win';
+    flashItem(i,fc);
+    const pc=wt==='jackpot'?'pj':wt==='big'?'pb':wt==='medium'||wt==='small'?'pw':'';
+    setPayline(i,pc);
+    const mc=wt==='jackpot'?'w-jp':wt==='big'?'w-big':wt==='medium'?'w-md':wt==='small'?'w-sm':'';
+    setMach(i,mc);
+    const gc=wt==='jackpot'?'jp':wt==='big'?'big':wt==='medium'||wt==='small'?'win':'';
+    if(gc) setGlow(i,gc);
+    setBadge(i,syms[i].icon+' '+syms[i].name,wt==='jackpot'?'rw-j':wt==='big'||wt==='medium'?'rw-b':wt==='small'?'rw-s':'');
+    spawnParts(i,wt==='loss'?'loss':wt==='bonus'?'medium':wt);
+  }
+
+  matchConnectors(syms);
+  updateStreak();
+  updateCombo();
+
+  // Stats
+  if(wt==='big'||wt==='jackpot') T.bigs++;
+  if(wt==='jackpot') T.jacks++;
+
+  // Near-miss detection (2/3 match on loss)
+  if(wt==='loss'){
+    const[a,b,c]=syms;const iw=s=>s.id==='wild';
+    if(a.id===b.id||iw(a)||iw(b)) addNearMiss(2);
+    else if(b.id===c.id||iw(b)||iw(c)) addNearMiss(0);
+  }
+
+  // Environment reactive BG
+  pulseEnv(wt);
+
+  // Win banner
+  const BNR={small:['SMALL WIN','A glimmer of fortune'],medium:['MEDIUM WIN','Fortune favours the bold'],big:['★ BIG WIN ★','The vault opens wide'],jackpot:['🏆 JACKPOT 🏆','You have ascended the highest tier'],bonus:['✦ BONUS ROUND','The Gold Vault awaits']};
+  const bc={small:'var(--gold2)',medium:'#2aff8a',big:'#f5e0a0',jackpot:'#ff3a6e',bonus:'#4ac8ff'};
+  if(wt!=='loss'&&BNR[wt]) showBanner(BNR[wt][0],BNR[wt][1],`+${cr} CR  ·  +${xp} XP`,bc[wt]);
+  if(lkFull) screenFlash('rgba(200,168,75,0.15)');
+  if(wt==='big') screenFlash('rgba(200,168,75,0.1)');
+  if(wt==='jackpot') screenFlash('rgba(255,58,110,0.22)');
+
+  // Objectives
+  tickObjs(syms,wt);
+
+  // Achievements
+  checkAchievements();
+
+  // Bonus round
+  if(wt==='bonus') openVault(releaseSpin);
+  else releaseSpin();
+
+  updateUI();persist();
+}
+
+function releaseSpin(){
+  locked=false;
+  const btn=document.getElementById('btnSpin');
+  btn.disabled=false;btn.classList.remove('sp');
+  if(autoMode) autoTmr=setTimeout(doSpin,turboMode?110:580);
+}
+
+/* ━━━ STATS DASHBOARD (NEW SYSTEM 3) ━━━━━━━━━
+   Slide-in panel with full persistent stats + achievement tracker.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function renderStatsPanel(){
+  const body=document.getElementById('spBody');
+  const wr=T.spins>0?((T.wins/T.spins)*100).toFixed(1)+'%':'—';
+  const achEarned=Object.keys(A).length;
+  body.innerHTML=`
+<div class="sp-section">
+  <div class="sp-sec-lbl">SESSION VITALS</div>
+  ${sr('Total Spins',T.spins)}${sr('Wins',T.wins)}${sr('Losses',T.losses)}${sr('Win Rate',wr)}${sr('Jackpots',T.jacks)}${sr('Big Wins',T.bigs)}${sr('Bonus Rounds',T.bonus)}
+</div>
+<div class="sp-section">
+  <div class="sp-sec-lbl">PROGRESSION</div>
+  ${sr('Level',S.level)}${sr('Prestige',S.prestige)}${sr('XP',S.xp+'/'+xpFor(S.level))}${sr('Credits',S.credits)}${sr('CR Earned (Total)',T.crEarned)}${sr('Session XP',T.sessionXP)}
+</div>
+<div class="sp-section">
+  <div class="sp-sec-lbl">RECORDS</div>
+  ${sr('Best Streak',T.bestStreak)}${sr('Best Combo','×'+CMB_TIERS[Math.min(T.bestCombo-1,CMB_TIERS.length-1)])}${sr('Luck Triggers',T.luckTrig)}${sr('Near Misses',T.nearMisses)}
+</div>
+<div class="sp-section">
+  <div class="sp-sec-lbl">ACHIEVEMENTS (${achEarned}/${ACH_DEF.length})</div>
+  ${ACH_DEF.map(a=>`<div class="ach-item${A[a.id]?' earned':''}"><span class="ach-icon">${a.icon}</span><div class="ach-info"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div><span class="ach-lock">${A[a.id]?'✓':'🔒'}</span></div>`).join('')}
+</div>`;
+}
+
+function sr(k,v){return `<div class="stat-row"><span class="sk">${k}</span><span class="sv">${v}</span></div>`;}
+
+let statsOpen=false;
+document.getElementById('btnStats').addEventListener('click',()=>{
+  statsOpen=!statsOpen;
+  renderStatsPanel();
+  document.getElementById('statsPanel').classList.toggle('open',statsOpen);
+});
+document.getElementById('spClose').addEventListener('click',()=>{
+  statsOpen=false;document.getElementById('statsPanel').classList.remove('open');
+});
+
+/* ━━━ UI UPDATE LAYER ━━━━━━━━━━━━━━━━━━━━━━━━ */
+function flashStat(id){
+  const el=document.querySelector(`#${id} .v`);
+  if(el){el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}
+}
+let _prevJP=0;
+
+function updateUI(){
+  document.getElementById('hCR').textContent=S.credits;
+  document.getElementById('hSP').textContent=S.spins;
+  document.getElementById('hLV').textContent=S.level;
+  document.getElementById('hST').textContent=S.streak;
+  document.getElementById('hBW').textContent=T.bigs;
+  document.getElementById('hJP').textContent=T.jacks;
+  const wr=T.spins>0?((T.wins/T.spins)*100).toFixed(1)+'%':'—';
+  document.getElementById('hWR').textContent=wr;
+  if(T.jacks>_prevJP){flashStat('hJP');_prevJP=T.jacks;}
+
+  document.getElementById('lkVal').textContent=S.luckMeter;
+  document.getElementById('lkFill').style.width=S.luckMeter+'%';
+  document.getElementById('lkFill').classList.toggle('charged',S.luckMeter>=100);
+
+  const needed=xpFor(S.level);
+  document.getElementById('xpVal').textContent=S.xp;
+  document.getElementById('xpNxt').textContent=needed;
+  document.getElementById('xpFill').style.width=Math.min(100,Math.round(S.xp/needed*100))+'%';
+
+  document.getElementById('hotVal').textContent=S.hotMeter;
+  document.getElementById('hotFill').style.width=S.hotMeter+'%';
+  document.getElementById('hotStatus').textContent=S.hotMeter>=100?'BLAZING':S.hotMeter>=75?'HOT':S.hotMeter>=40?'WARM':'COOL';
+
+  document.getElementById('sW').textContent=T.wins;
+  document.getElementById('sL').textContent=T.losses;
+  document.getElementById('sB').textContent=T.bonus;
+  document.getElementById('sBst').textContent=T.bestStreak;
+  document.getElementById('sCR').textContent=T.crEarned;
+
+  // Ticker
+  document.getElementById('tkPT').textContent=`+${(S.prestige*0.5).toFixed(1)}%`;
+  document.getElementById('tkTS').textContent=T.spins;
+  document.getElementById('tkJP').textContent=T.jacks;
+  document.getElementById('tkBC').textContent='×'+CMB_TIERS[Math.min(T.bestCombo-1,CMB_TIERS.length-1)];
+  document.getElementById('tkLT').textContent=T.luckTrig;
+  document.getElementById('tkBR').textContent=T.bonus;
+  document.getElementById('tkAC').textContent=Object.keys(A).length;
+  document.getElementById('tkXP').textContent=T.sessionXP;
+}
+
+/* ━━━ CONTROLS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+document.getElementById('btnSpin').addEventListener('click',()=>{if(!autoMode)doSpin();});
+
+document.getElementById('btnAuto').addEventListener('click',function(){
+  autoMode=!autoMode;this.classList.toggle('on',autoMode);
+  if(autoMode) doSpin();else{clearTimeout(autoTmr);autoTmr=null;}
+});
+
+document.getElementById('btnTurbo').addEventListener('click',function(){
+  turboMode=!turboMode;this.classList.toggle('on',turboMode);
+});
+
+/* ━━━ INIT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+applyTheme();
+updateUI();
+updateCombo();
+updateStreak();
+checkAchievements();
+renderStatsPanel();
+</script>
+</body>
+</html>
