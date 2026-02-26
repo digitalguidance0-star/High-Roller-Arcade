@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wheel of Fortune</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #2a2a3a;
+    --low: #00c97a;
+    --low-dark: #005a36;
+    --med: #f5c400;
+    --med-dark: #7a6200;
+    --high: #ff4040;
+    --high-dark: #7a0000;
+    --jackpot: #ffd700;
+    --jackpot-glow: #ff9900;
+    --text: #e8e0d0;
+    --muted: #888;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,180,0,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 20% 80%, rgba(0,201,122,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255,64,64,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 700px;
+    padding: 2rem 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+
+  .header-sub {
+    font-size: 0.75rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 7vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff8e0 0%, #ffd700 40%, #ff9900 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 30px rgba(255,180,0,0.5));
+  }
+
+  .header-rule {
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--med), transparent);
+    margin: 0.8rem auto 0;
+  }
+
+  /* Wheel wrapper */
+  .wheel-section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* Pointer */
+  .pointer {
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 38px solid var(--jackpot);
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.8));
+    z-index: 10;
+    position: relative;
+    top: 4px;
+  }
+
+  .wheel-outer {
+    position: relative;
+    width: min(420px, 90vw);
+    height: min(420px, 90vw);
+  }
+
+  /* Outer ring glow */
+  .wheel-glow {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow:
+      0 0 0 8px rgba(255,215,0,0.15),
+      0 0 40px rgba(255,180,0,0.2),
+      0 0 80px rgba(255,180,0,0.08);
+    pointer-events: none;
+    z-index: 2;
+    transition: box-shadow 0.3s;
+  }
+
+  .wheel-glow.jackpot-win {
+    animation: glowPulse 0.4s ease-in-out infinite alternate;
+  }
+
+  @keyframes glowPulse {
+    from { box-shadow: 0 0 0 8px rgba(255,215,0,0.3), 0 0 60px rgba(255,180,0,0.6), 0 0 120px rgba(255,100,0,0.3); }
+    to   { box-shadow: 0 0 0 8px rgba(255,215,0,0.7), 0 0 100px rgba(255,215,0,0.9), 0 0 160px rgba(255,100,0,0.6); }
+  }
+
+  canvas#wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+  }
+
+  /* Center hub */
+  .hub {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff8e0, #c8a000);
+    box-shadow: 0 0 0 4px #0a0a0f, 0 0 0 7px rgba(255,180,0,0.4), 0 0 20px rgba(255,180,0,0.5);
+    z-index: 5;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    transition: transform 0.15s;
+  }
+  .hub:hover { transform: translate(-50%, -50%) scale(1.08); }
+  .hub:active { transform: translate(-50%, -50%) scale(0.96); }
+
+  /* Spin Button */
+  .spin-btn {
+    margin-top: 1.6rem;
+    background: linear-gradient(135deg, #c8a000 0%, #ffd700 50%, #ff9900 100%);
+    color: #0a0a0f;
+    border: none;
+    padding: 0.9rem 3.5rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    box-shadow: 0 4px 30px rgba(255,180,0,0.4), 0 2px 0 rgba(0,0,0,0.4);
+    text-transform: uppercase;
+  }
+
+  .spin-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s;
+  }
+
+  .spin-btn:hover::before { left: 150%; }
+  .spin-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(255,180,0,0.6), 0 2px 0 rgba(0,0,0,0.4); }
+  .spin-btn:active { transform: translateY(0); }
+  .spin-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 10px rgba(255,180,0,0.2);
+  }
+
+  /* Result display */
+  .result-panel {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 72px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-panel::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--result-accent, var(--border));
+    transition: background 0.3s;
+  }
+
+  .result-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .result-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--result-color, var(--muted));
+    transition: color 0.3s;
+    line-height: 1;
+  }
+
+  .result-tier {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  .result-right { text-align: right; }
+
+  .result-emoji {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+
+  /* Recent spins */
+  .recent-section {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .recent-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.7rem;
+  }
+
+  .recent-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .recent-chip {
+    padding: 0.3rem 0.75rem;
+    border-radius: 2px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: 1px solid;
+    animation: chipIn 0.3s ease-out;
+    font-family: 'Playfair Display', serif;
+  }
+
+  @keyframes chipIn {
+    from { opacity: 0; transform: scale(0.7) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .chip-low    { color: var(--low);    border-color: var(--low-dark);    background: rgba(0,201,122,0.08); }
+  .chip-med    { color: var(--med);    border-color: var(--med-dark);    background: rgba(245,196,0,0.08); }
+  .chip-high   { color: var(--high);   border-color: var(--high-dark);   background: rgba(255,64,64,0.08); }
+  .chip-jackpot{ color: var(--jackpot);border-color: var(--jackpot-glow);background: rgba(255,180,0,0.12); }
+
+  /* Legend */
+  .legend {
+    width: 100%;
+    max-width: 420px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-name {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .legend-mult {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  /* Confetti canvas */
+  #confetti {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Jackpot overlay */
+  .jackpot-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 99;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  .jackpot-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .jackpot-box {
+    text-align: center;
+    animation: jackpotBounce 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes jackpotBounce {
+    from { transform: scale(0.4) rotate(-5deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  .jackpot-emoji { font-size: 5rem; display: block; margin-bottom: 0.5rem; }
+
+  .jackpot-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff8e0, #ffd700, #ff9900, #ffd700, #fff8e0);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 300% center; }
+  }
+
+  .jackpot-sub {
+    font-size: 1.1rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  .jackpot-close {
+    margin-top: 2rem;
+    background: transparent;
+    border: 1px solid rgba(255,215,0,0.4);
+    color: var(--jackpot);
+    padding: 0.6rem 2rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .jackpot-close:hover { background: rgba(255,215,0,0.1); border-color: var(--jackpot); }
+
+  /* Spin count */
+  .stats-bar {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 30px;
+    background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+
+<div class="jackpot-overlay" id="jackpotOverlay">
+  <div class="jackpot-box">
+    <span class="jackpot-emoji">💰</span>
+    <div class="jackpot-title">JACKPOT!</div>
+    <div class="jackpot-sub">50× Multiplier · Legendary</div>
+    <button class="jackpot-close" onclick="closeJackpot()">Collect Winnings</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="header-sub">Est. Since Forever</div>
+    <h1>Wheel of Fortune</h1>
+    <div class="header-rule"></div>
+  </div>
+
+  <div class="wheel-section">
+    <div class="pointer"></div>
+    <div class="wheel-outer">
+      <div class="wheel-glow" id="wheelGlow"></div>
+      <canvas id="wheel"></canvas>
+      <div class="hub" onclick="spinWheel()" title="Spin!">✦</div>
+    </div>
+    <button class="spin-btn" id="spinBtn" onclick="spinWheel()">SPIN</button>
+  </div>
+
+  <div class="result-panel" id="resultPanel">
+    <div>
+      <div class="result-label">Last Result</div>
+      <div class="result-value" id="resultValue">—</div>
+      <div class="result-tier" id="resultTier">Awaiting spin</div>
+    </div>
+    <div class="result-right">
+      <div class="result-emoji" id="resultEmoji">🎯</div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-value" id="totalSpins">0</div>
+      <div class="stat-label">Spins</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-value" id="bestResult">—</div>
+      <div class="stat-label">Best</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-value" id="jackpotCount">0</div>
+      <div class="stat-label">Jackpots</div>
+    </div>
+  </div>
+
+  <div class="recent-section">
+    <div class="recent-title">Recent Spins</div>
+    <div class="recent-list" id="recentList">
+      <span style="color:var(--muted);font-size:0.85rem;letter-spacing:0.1em;">No spins yet...</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#00c97a;box-shadow:0 0 6px #00c97a"></div>
+      <span class="legend-name">Low Risk</span>
+      <span class="legend-mult" style="color:#00c97a">2×</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#f5c400;box-shadow:0 0 6px #f5c400"></div>
+      <span class="legend-name">Medium Risk</span>
+      <span class="legend-mult" style="color:#f5c400">5×</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ff4040;box-shadow:0 0 6px #ff4040"></div>
+      <span class="legend-name">High Risk</span>
+      <span class="legend-mult" style="color:#ff4040">10×</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ffd700;box-shadow:0 0 8px #ffd700,0 0 16px #ff9900"></div>
+      <span class="legend-name">Jackpot</span>
+      <span class="legend-mult" style="color:#ffd700">50×</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- WHEEL DATA ----
+const SLICES = [
+  { label: "2×",      multiplier: 2,  tier: "Low",    weight: 35, emoji: "🍀", color: "#00c97a", dark: "#004d2e", textColor: "#fff" },
+  { label: "5×",      multiplier: 5,  tier: "Medium", weight: 25, emoji: "⚡", color: "#f5c400", dark: "#5a4700", textColor: "#000" },
+  { label: "2×",      multiplier: 2,  tier: "Low",    weight: 35, emoji: "🍀", color: "#00c97a", dark: "#004d2e", textColor: "#fff" },
+  { label: "10×",     multiplier: 10, tier: "High",   weight: 15, emoji: "🔥", color: "#ff4040", dark: "#5a0000", textColor: "#fff" },
+  { label: "2×",      multiplier: 2,  tier: "Low",    weight: 35, emoji: "🍀", color: "#00c97a", dark: "#004d2e", textColor: "#fff" },
+  { label: "5×",      multiplier: 5,  tier: "Medium", weight: 25, emoji: "⚡", color: "#f5c400", dark: "#5a4700", textColor: "#000" },
+  { label: "10×",     multiplier: 10, tier: "High",   weight: 15, emoji: "🔥", color: "#ff4040", dark: "#5a0000", textColor: "#fff" },
+  { label: "2×",      multiplier: 2,  tier: "Low",    weight: 35, emoji: "🍀", color: "#00c97a", dark: "#004d2e", textColor: "#fff" },
+  { label: "5×",      multiplier: 5,  tier: "Medium", weight: 25, emoji: "⚡", color: "#f5c400", dark: "#5a4700", textColor: "#000" },
+  { label: "JACKPOT", multiplier: 50, tier: "Legendary", weight: 3, emoji: "💰", color: "#ffd700", dark: "#7a5c00", textColor: "#000" },
+  { label: "10×",     multiplier: 10, tier: "High",   weight: 15, emoji: "🔥", color: "#ff4040", dark: "#5a0000", textColor: "#fff" },
+  { label: "5×",      multiplier: 5,  tier: "Medium", weight: 25, emoji: "⚡", color: "#f5c400", dark: "#5a4700", textColor: "#000" },
+];
+
+const N = SLICES.length;
+const SLICE_ANGLE = (2 * Math.PI) / N;
+
+// ---- CANVAS SETUP ----
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const SIZE = 420;
+canvas.width = SIZE;
+canvas.height = SIZE;
+const R = SIZE / 2;
+const cx = R, cy = R;
+const outerR = R - 2;
+const innerR = 28; // hub hole
+
+let currentRotation = 0; // radians, position of slice 0
+let spinning = false;
+
+let totalSpins = 0;
+let jackpotCount = 0;
+let bestMult = 0;
+const recentSpins = [];
+
+function drawWheel(rot) {
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  for (let i = 0; i < N; i++) {
+    const startAngle = rot + i * SLICE_ANGLE;
+    const endAngle = startAngle + SLICE_ANGLE;
+    const slice = SLICES[i];
+    const midAngle = startAngle + SLICE_ANGLE / 2;
+
+    // Slice fill
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, startAngle, endAngle);
+    ctx.closePath();
+
+    // Gradient fill
+    const grd = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+    grd.addColorStop(0, slice.dark);
+    grd.addColorStop(0.4, slice.color + 'cc');
+    grd.addColorStop(1, slice.color);
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = '#0a0a0f';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Jackpot shimmer
+    if (slice.tier === 'Legendary') {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, outerR, startAngle, endAngle);
+      ctx.closePath();
+      const sgrd = ctx.createLinearGradient(
+        cx + Math.cos(midAngle) * innerR,
+        cy + Math.sin(midAngle) * innerR,
+        cx + Math.cos(midAngle) * outerR,
+        cy + Math.sin(midAngle) * outerR
+      );
+      sgrd.addColorStop(0, 'transparent');
+      sgrd.addColorStop(0.5, '#fff');
+      sgrd.addColorStop(1, 'transparent');
+      ctx.fillStyle = sgrd;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(midAngle);
+
+    const textR = outerR * 0.68;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Label
+    ctx.font = `bold ${slice.tier === 'Legendary' ? 13 : 15}px "Playfair Display", serif`;
+    ctx.fillStyle = slice.textColor;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(slice.label, textR, 0);
+
+    // Emoji
+    ctx.font = '14px serif';
+    ctx.shadowBlur = 0;
+    ctx.fillText(slice.emoji, textR * 0.42, 0);
+
+    ctx.restore();
+  }
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,215,0,0.35)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Inner circle (hub mask)
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fill();
+}
+
+drawWheel(currentRotation);
+
+// ---- WEIGHTED RANDOM ----
+function weightedRandom() {
+  const totalWeight = SLICES.reduce((s, sl) => s + sl.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < N; i++) {
+    r -= SLICES[i].weight;
+    if (r <= 0) return i;
+  }
+  return N - 1;
+}
+
+// ---- EASING ----
+function easeOutQuintic(t) {
+  return 1 - Math.pow(1 - t, 5);
+}
+
+// ---- SPIN ----
+function spinWheel() {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+
+  const targetIdx = weightedRandom();
+
+  // The pointer is at top (−π/2). We want targetIdx slice center at top.
+  // Slice i center angle from start: currentRotation + i*SLICE_ANGLE + SLICE_ANGLE/2
+  // We want that = -π/2 + 2πk
+  // Additional full rotations for drama
+  const extraSpins = 5 + Math.floor(Math.random() * 4); // 5-8 full rotations
+  const targetAngleAtTop = -Math.PI / 2 - (targetIdx * SLICE_ANGLE + SLICE_ANGLE / 2);
+  // Normalize to [0, 2π)
+  const normalized = ((targetAngleAtTop % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const totalRotation = extraSpins * Math.PI * 2 + normalized - (((currentRotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
+
+  const duration = 4000 + Math.random() * 1500;
+  const startTime = performance.now();
+  const startRotation = currentRotation;
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = easeOutQuintic(t);
+    currentRotation = startRotation + totalRotation * eased;
+    drawWheel(currentRotation);
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      spinning = false;
+      currentRotation = startRotation + totalRotation;
+      drawWheel(currentRotation);
+      showResult(targetIdx);
+      document.getElementById('spinBtn').disabled = false;
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ---- RESULT ----
+function showResult(idx) {
+  const slice = SLICES[idx];
+  totalSpins++;
+  if (slice.multiplier > bestMult) bestMult = slice.multiplier;
+
+  // Update stats
+  document.getElementById('totalSpins').textContent = totalSpins;
+  document.getElementById('bestResult').textContent = bestMult + '×';
+
+  // Tier class
+  const tierClass = { Low: 'chip-low', Medium: 'chip-med', High: 'chip-high', Legendary: 'chip-jackpot' }[slice.tier];
+  const tierColors = {
+    Low: ['#00c97a', 'rgba(0,201,122,0.15)'],
+    Medium: ['#f5c400', 'rgba(245,196,0,0.15)'],
+    High: ['#ff4040', 'rgba(255,64,64,0.15)'],
+    Legendary: ['#ffd700', 'rgba(255,215,0,0.15)']
+  };
+  const [color, bg] = tierColors[slice.tier];
+
+  const panel = document.getElementById('resultPanel');
+  panel.style.setProperty('--result-accent', color);
+  panel.style.setProperty('--result-color', color);
+  panel.style.background = bg;
+  setTimeout(() => { panel.style.background = 'var(--surface)'; }, 800);
+
+  document.getElementById('resultValue').textContent = slice.label;
+  document.getElementById('resultValue').style.color = color;
+  document.getElementById('resultTier').textContent = slice.tier + ' Risk';
+  document.getElementById('resultEmoji').textContent = slice.emoji;
+
+  // Recent spins
+  recentSpins.unshift({ label: slice.label, tierClass });
+  if (recentSpins.length > 6) recentSpins.pop();
+  renderRecent();
+
+  if (slice.tier === 'Legendary') {
+    jackpotCount++;
+    document.getElementById('jackpotCount').textContent = jackpotCount;
+    document.getElementById('wheelGlow').classList.add('jackpot-win');
+    setTimeout(() => {
+      document.getElementById('jackpotOverlay').classList.add('show');
+      launchConfetti();
+    }, 400);
+  }
+}
+
+function renderRecent() {
+  const list = document.getElementById('recentList');
+  list.innerHTML = recentSpins.map(s =>
+    `<span class="recent-chip ${s.tierClass}">${s.label}</span>`
+  ).join('');
+}
+
+function closeJackpot() {
+  document.getElementById('jackpotOverlay').classList.remove('show');
+  document.getElementById('wheelGlow').classList.remove('jackpot-win');
+  stopConfetti();
+}
+
+// ---- CONFETTI ----
+const cCanvas = document.getElementById('confetti');
+const cCtx = cCanvas.getContext('2d');
+let particles = [];
+let confettiActive = false;
+let confettiAF;
+
+function resizeConfetti() {
+  cCanvas.width = window.innerWidth;
+  cCanvas.height = window.innerHeight;
+}
+resizeConfetti();
+window.addEventListener('resize', resizeConfetti);
+
+function launchConfetti() {
+  confettiActive = true;
+  particles = [];
+  const colors = ['#ffd700','#ff9900','#fff8e0','#ff4040','#00c97a','#f5c400','#ff69b4'];
+  for (let i = 0; i < 180; i++) {
+    particles.push({
+      x: Math.random() * cCanvas.width,
+      y: -10 - Math.random() * 100,
+      vx: (Math.random() - 0.5) * 6,
+      vy: 2 + Math.random() * 5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      w: 6 + Math.random() * 8,
+      h: 8 + Math.random() * 14,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.2,
+      opacity: 1
+    });
+  }
+  animateConfetti();
+}
+
+function animateConfetti() {
+  if (!confettiActive) return;
+  cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+  let alive = false;
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.rot += p.rotV;
+    if (p.y > cCanvas.height + 20) continue;
+    alive = true;
+    cCtx.save();
+    cCtx.translate(p.x, p.y);
+    cCtx.rotate(p.rot);
+    cCtx.globalAlpha = p.opacity;
+    cCtx.fillStyle = p.color;
+    cCtx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+    cCtx.restore();
+  }
+  if (alive && confettiActive) confettiAF = requestAnimationFrame(animateConfetti);
+  else { cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height); }
+}
+
+function stopConfetti() {
+  confettiActive = false;
+  cancelAnimationFrame(confettiAF);
+  cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+}
+</script>
+</body>
+</html>
