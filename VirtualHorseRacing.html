@@ -1,0 +1,2454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏇 Royal Downs — Virtual Racing</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dim: #8a6f2e;
+    --emerald: #0d2e1a;
+    --emerald-mid: #1a4a2a;
+    --emerald-light: #2a6640;
+    --emerald-panel: #0f2b1c;
+    --emerald-border: #1e4d2e;
+    --red: #e53333;
+    --green: #22c55e;
+    --text: #e8dfc0;
+    --text-dim: #8a7f60;
+    --text-bright: #f5eecc;
+    --win-gold: #ffd700;
+    --bg: #071810;
+    --panel-bg: rgba(10, 28, 18, 0.95);
+    --glass: rgba(15, 43, 28, 0.85);
+    --ticker-bg: #050f08;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      radial-gradient(ellipse at 20% 50%, rgba(30,80,50,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(20,60,35,0.12) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23000'/%3E%3Crect width='1' height='1' fill='%23ffffff08'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body > * { position: relative; z-index: 1; }
+
+  /* ═══════════════════════════════════════ HEADER */
+  #header {
+    background: linear-gradient(180deg, #040e08 0%, #071810 100%);
+    border-bottom: 2px solid var(--gold-dim);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 58px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  }
+
+  #header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .logo-icon {
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px var(--gold));
+  }
+
+  .logo-text {
+    font-size: 22px;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dim));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+
+  .logo-sub {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--gold-dim);
+    font-weight: 300;
+    display: block;
+    margin-top: -4px;
+    -webkit-text-fill-color: var(--gold-dim);
+  }
+
+  .header-center {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .race-info-block {
+    text-align: center;
+    background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 4px;
+    padding: 4px 16px;
+  }
+
+  .race-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+
+  .race-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    color: var(--gold-light);
+    line-height: 1;
+  }
+
+  #race-timer {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 32px;
+    color: var(--gold-light);
+    text-shadow: 0 0 20px rgba(201,168,76,0.6);
+    min-width: 80px;
+    text-align: center;
+  }
+
+  #race-timer.locked { color: var(--red); text-shadow: 0 0 20px rgba(229,51,51,0.6); animation: blink 0.5s infinite; }
+  #race-timer.race-on { color: var(--green); text-shadow: 0 0 20px rgba(34,197,94,0.6); }
+
+  @keyframes blink { 50% { opacity: 0.4; } }
+
+  #phase-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .balance-block {
+    text-align: right;
+  }
+
+  .balance-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+
+  #balance-display {
+    font-family: 'Oswald', sans-serif;
+    font-size: 22px;
+    color: var(--win-gold);
+    text-shadow: 0 0 12px rgba(255,215,0,0.4);
+  }
+
+  .header-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .header-btn:hover {
+    background: rgba(201,168,76,0.2);
+    box-shadow: 0 0 10px rgba(201,168,76,0.3);
+  }
+
+  /* ═══════════════════════════════════════ MAIN GRID */
+  #main {
+    display: grid;
+    grid-template-columns: 300px 1fr 280px;
+    gap: 0;
+    height: calc(100vh - 58px - 44px);
+    overflow: hidden;
+  }
+
+  /* ═══════════════════════════════════════ PANELS */
+  .panel {
+    background: var(--panel-bg);
+    border-right: 1px solid var(--emerald-border);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .panel::-webkit-scrollbar { width: 4px; }
+  .panel::-webkit-scrollbar-track { background: var(--bg); }
+  .panel::-webkit-scrollbar-thumb { background: var(--emerald-light); border-radius: 2px; }
+
+  .panel-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--emerald-border);
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .panel-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .panel-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: rgba(201,168,76,0.15);
+    border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold-dim);
+  }
+
+  /* ═══════════════════════════════════════ ODDS BOARD */
+  #left-panel { border-right: 1px solid var(--emerald-border); }
+
+  .odds-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .odds-table thead tr {
+    background: rgba(0,0,0,0.4);
+  }
+
+  .odds-table th {
+    padding: 6px 8px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--emerald-border);
+    text-align: center;
+  }
+
+  .odds-table th:first-child, .odds-table td:first-child { text-align: left; padding-left: 12px; }
+
+  .odds-table td {
+    padding: 8px 6px;
+    font-size: 14px;
+    text-align: center;
+    border-bottom: 1px solid rgba(30,77,46,0.5);
+    transition: background 0.3s;
+    vertical-align: middle;
+  }
+
+  .odds-row {
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .odds-row:hover { background: rgba(201,168,76,0.06); }
+  .odds-row.hot { background: rgba(229,100,0,0.08); }
+  .odds-row.favorite { background: rgba(34,197,94,0.06); }
+
+  .horse-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  .horse-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-bright);
+    white-space: nowrap;
+  }
+
+  .hot-icon { font-size: 12px; }
+
+  .odds-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.4s;
+    display: inline-block;
+    min-width: 40px;
+  }
+
+  .odds-val.up { color: var(--green); background: rgba(34,197,94,0.1); animation: flashGreen 0.5s; }
+  .odds-val.down { color: var(--red); background: rgba(229,51,51,0.1); animation: flashRed 0.5s; }
+  .odds-val.neutral { color: var(--text); }
+
+  @keyframes flashGreen { 0%,100%{ background: rgba(34,197,94,0.1); } 50%{ background: rgba(34,197,94,0.3); } }
+  @keyframes flashRed { 0%,100%{ background: rgba(229,51,51,0.1); } 50%{ background: rgba(229,51,51,0.3); } }
+
+  .movement-arrow { font-size: 10px; }
+
+  /* Quick-bet buttons in odds row */
+  .quick-bet-btns {
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .odds-row:hover .quick-bet-btns { opacity: 1; }
+
+  .qb-btn {
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 2px;
+    border: 1px solid;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    background: transparent;
+  }
+  .qb-w { border-color: var(--gold-dim); color: var(--gold); }
+  .qb-w:hover { background: var(--gold-dim); color: #000; }
+  .qb-p { border-color: rgba(100,150,255,0.4); color: #8aadff; }
+  .qb-p:hover { background: rgba(100,150,255,0.2); }
+  .qb-s { border-color: rgba(200,100,100,0.4); color: #ffaaaa; }
+  .qb-s:hover { background: rgba(200,100,100,0.2); }
+
+  /* ═══════════════════════════════════════ CENTER TRACK */
+  #center-panel {
+    background: #050e08;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--emerald-border);
+    border-right: 1px solid var(--emerald-border);
+  }
+
+  #track-container {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: linear-gradient(180deg, #030a05 0%, #071205 40%, #0a1a08 100%);
+  }
+
+  /* Track surface */
+  #track-svg-container {
+    position: absolute;
+    inset: 0;
+  }
+
+  #race-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Race state overlay */
+  #race-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+
+  .overlay-card {
+    text-align: center;
+    background: rgba(5,15,10,0.92);
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    padding: 24px 40px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 60px rgba(201,168,76,0.1);
+    pointer-events: all;
+  }
+
+  .overlay-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .overlay-main {
+    font-family: 'Oswald', sans-serif;
+    font-size: 48px;
+    color: var(--gold-light);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(201,168,76,0.5);
+  }
+
+  .overlay-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* ═══════════════════════════════════════ RESULTS PANEL */
+  #results-display {
+    background: rgba(0,0,0,0.5);
+    border-top: 1px solid var(--emerald-border);
+    padding: 10px 16px;
+    min-height: 80px;
+    max-height: 110px;
+    overflow-y: auto;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .result-place {
+    text-align: center;
+    padding: 6px;
+    border-radius: 4px;
+    background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.15);
+  }
+
+  .result-place-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--gold-dim);
+  }
+
+  .result-horse-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-top: 2px;
+  }
+
+  .result-odds {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+  }
+
+  /* ═══════════════════════════════════════ RIGHT PANEL - BET SLIP */
+  #right-panel {
+    border-left: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bet-type-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--emerald-border);
+    background: rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+
+  .bet-tab {
+    flex: 1;
+    padding: 7px 4px;
+    text-align: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .bet-tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+    background: rgba(201,168,76,0.05);
+  }
+
+  .bet-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.03); }
+
+  /* Bet builder section */
+  #bet-builder {
+    padding: 12px;
+    border-bottom: 1px solid var(--emerald-border);
+    flex-shrink: 0;
+  }
+
+  .bet-horse-selector {
+    margin-bottom: 10px;
+  }
+
+  .bet-sel-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .horse-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .horse-chip {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1px;
+  }
+
+  .horse-chip:hover { background: rgba(201,168,76,0.15); color: var(--text); }
+  .horse-chip.selected { background: rgba(201,168,76,0.25); border-color: var(--gold); color: var(--gold-light); }
+
+  .stake-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .stake-label {
+    font-size: 10px;
+    color: var(--gold-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .stake-chips {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .stake-chip {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(255,215,0,0.08);
+    border: 1px solid rgba(255,215,0,0.2);
+    color: var(--win-gold);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .stake-chip:hover, .stake-chip.active { background: rgba(255,215,0,0.2); border-color: var(--win-gold); }
+
+  #custom-stake {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--emerald-border);
+    border-radius: 3px;
+    color: var(--win-gold);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    padding: 4px 8px;
+    width: 80px;
+    outline: none;
+  }
+  #custom-stake:focus { border-color: var(--gold-dim); }
+
+  .add-bet-btn {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1));
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    color: var(--gold-light);
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-bet-btn:hover {
+    background: linear-gradient(135deg, rgba(201,168,76,0.35), rgba(201,168,76,0.2));
+    box-shadow: 0 0 15px rgba(201,168,76,0.2);
+  }
+  .add-bet-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Payout preview */
+  #payout-preview {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+  }
+  #payout-preview span { color: var(--green); }
+
+  /* Bet slip items */
+  #bet-slip-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  #bet-slip-items::-webkit-scrollbar { width: 3px; }
+  #bet-slip-items::-webkit-scrollbar-thumb { background: var(--emerald-light); }
+
+  .bet-slip-empty {
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .bet-slip-empty .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+
+  .bet-item {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--emerald-border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  .bet-item-left { flex: 1; }
+
+  .bet-item-type {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+
+  .bet-item-horse {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-top: 1px;
+  }
+
+  .bet-item-stake {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--win-gold);
+    margin-top: 2px;
+  }
+
+  .bet-item-payout {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+  }
+
+  .bet-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+  .bet-remove:hover { color: var(--red); }
+
+  /* Place bet footer */
+  #bet-footer {
+    border-top: 1px solid var(--emerald-border);
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+
+  .bet-total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  .bet-total-label { color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; font-size: 11px; }
+  .bet-total-val { font-family: 'Share Tech Mono', monospace; color: var(--win-gold); }
+  .bet-potential-val { font-family: 'Share Tech Mono', monospace; color: var(--green); }
+
+  #place-bet-btn {
+    width: 100%;
+    padding: 13px;
+    margin-top: 10px;
+    background: linear-gradient(135deg, #1a6b30, #0d4a1f);
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #place-bet-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.05));
+    pointer-events: none;
+  }
+
+  #place-bet-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #228040, #155a27);
+    box-shadow: 0 0 20px rgba(34,197,94,0.3);
+    transform: translateY(-1px);
+  }
+
+  #place-bet-btn:disabled {
+    background: rgba(50,50,50,0.5);
+    border-color: rgba(100,100,100,0.3);
+    color: rgba(200,200,200,0.3);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  #place-bet-btn.locked-state {
+    background: linear-gradient(135deg, #6b1a1a, #4a0d0d);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* Bet history (within right panel, toggled) */
+  #bet-history {
+    padding: 8px;
+    flex: 1;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    border-radius: 3px;
+    font-size: 12px;
+    border-left: 3px solid;
+    background: rgba(0,0,0,0.25);
+  }
+
+  .history-item.win { border-left-color: var(--green); }
+  .history-item.loss { border-left-color: var(--red); opacity: 0.7; }
+  .history-item.pending { border-left-color: var(--gold-dim); }
+
+  .history-horse { color: var(--text-bright); font-weight: 600; }
+  .history-type { color: var(--text-dim); font-size: 10px; letter-spacing: 1px; }
+  .history-amount { font-family: 'Share Tech Mono', monospace; font-size: 13px; }
+  .history-amount.win { color: var(--green); }
+  .history-amount.loss { color: var(--red); }
+
+  /* ═══════════════════════════════════════ TICKER */
+  #ticker {
+    height: 44px;
+    background: var(--ticker-bg);
+    border-top: 1px solid var(--gold-dim);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #ticker::before {
+    content: '📡 LIVE';
+    position: absolute;
+    left: 0;
+    height: 100%;
+    padding: 0 16px;
+    background: var(--gold);
+    color: #000;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    z-index: 2;
+    white-space: nowrap;
+  }
+
+  .ticker-inner {
+    display: flex;
+    animation: tickerScroll 30s linear infinite;
+    padding-left: 90px;
+    white-space: nowrap;
+    color: var(--text-dim);
+    font-size: 13px;
+    gap: 0;
+  }
+
+  .ticker-inner:hover { animation-play-state: paused; }
+
+  @keyframes tickerScroll {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-200%); }
+  }
+
+  .ticker-sep {
+    color: var(--gold-dim);
+    margin: 0 20px;
+  }
+
+  .ticker-hl { color: var(--gold-light); font-weight: 600; }
+  .ticker-win { color: var(--green); }
+  .ticker-loss { color: var(--red); }
+
+  /* ═══════════════════════════════════════ ANNOUNCER */
+  #announcer-box {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(5,15,10,0.9);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-style: italic;
+    color: var(--gold-light);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.4s;
+    z-index: 20;
+    max-width: 90%;
+    text-align: center;
+    pointer-events: none;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  #announcer-box.visible {
+    opacity: 1;
+    animation: announcerPop 0.3s ease;
+  }
+
+  @keyframes announcerPop { 0%{ transform: translateX(-50%) scale(0.95); } 100%{ transform: translateX(-50%) scale(1); } }
+
+  /* Win notification */
+  #win-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: linear-gradient(135deg, #1a5a1a, #0d3a0d);
+    border: 2px solid var(--green);
+    border-radius: 8px;
+    padding: 16px 32px;
+    text-align: center;
+    opacity: 0;
+    transition: all 0.4s;
+    z-index: 999;
+    pointer-events: none;
+    box-shadow: 0 0 40px rgba(34,197,94,0.3);
+  }
+
+  #win-notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .win-notif-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px;
+    color: var(--win-gold);
+    letter-spacing: 3px;
+  }
+
+  .win-notif-amount {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    color: var(--green);
+  }
+
+  /* ═══════════════════════════════════════ CANVAS STYLES */
+  canvas {
+    image-rendering: pixelated;
+  }
+
+  /* Hot horse fire pulse */
+  @keyframes firePulse {
+    0%, 100% { text-shadow: 0 0 4px orange; }
+    50% { text-shadow: 0 0 12px red, 0 0 4px orange; }
+  }
+  .hot-icon { animation: firePulse 0.8s infinite; }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    #main { grid-template-columns: 260px 1fr 250px; }
+  }
+
+  @media (max-width: 768px) {
+    #main { grid-template-columns: 1fr; grid-template-rows: auto; }
+    #left-panel, #right-panel { display: none; }
+  }
+
+  /* Bet placed animation */
+  @keyframes betConfirm {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  .bet-confirm-flash {
+    animation: betConfirm 0.3s ease;
+  }
+
+  /* Finishing position medals */
+  .medal-1 { color: #ffd700; }
+  .medal-2 { color: #c0c0c0; }
+  .medal-3 { color: #cd7f32; }
+
+  /* Form guide popup */
+  #form-guide {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+  }
+
+  #form-guide.open { display: flex; }
+
+  .form-guide-inner {
+    background: var(--emerald-panel);
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    padding: 24px;
+    width: 360px;
+    max-width: 90vw;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  }
+
+  .form-guide-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    color: var(--gold-light);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .form-close {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 20px;
+    transition: color 0.15s;
+  }
+  .form-close:hover { color: var(--text); }
+
+  .form-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(30,77,46,0.5);
+    font-size: 14px;
+  }
+
+  .form-stat-label { color: var(--text-dim); }
+  .form-stat-val { color: var(--text-bright); font-family: 'Share Tech Mono', monospace; }
+
+  .form-last-races {
+    margin-top: 12px;
+  }
+
+  .form-race-dot {
+    display: inline-block;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 28px;
+    text-align: center;
+    margin-right: 4px;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════ HEADER -->
+<header id="header">
+  <div class="logo">
+    <span class="logo-icon">🏇</span>
+    <div>
+      <div class="logo-text">Royal Downs</div>
+      <span class="logo-sub">Virtual Racing</span>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="race-info-block">
+      <div class="race-label">Race</div>
+      <div class="race-value" id="race-number">R1</div>
+    </div>
+    <div style="text-align:center">
+      <div id="race-timer">1:30</div>
+      <div id="phase-label">BETTING OPEN</div>
+    </div>
+    <div class="race-info-block">
+      <div class="race-label">Track</div>
+      <div class="race-value" style="font-size:14px" id="track-name">TURF</div>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="balance-block">
+      <div class="balance-label">Balance</div>
+      <div id="balance-display">$1,000.00</div>
+    </div>
+    <button class="header-btn" id="sound-btn" title="Toggle Sound">🔊</button>
+    <button class="header-btn" onclick="showFormGuide()" title="Form Guide">📊</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════ MAIN GRID -->
+<div id="main">
+
+  <!-- LEFT: Odds Board -->
+  <div class="panel" id="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">Live Odds</span>
+      <span class="panel-badge" id="odds-update-badge">LIVE</span>
+    </div>
+    <table class="odds-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Win</th>
+          <th>Plc</th>
+          <th>Shw</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="odds-tbody"></tbody>
+    </table>
+
+    <!-- Hot horse legend -->
+    <div style="padding: 10px 12px; border-top: 1px solid var(--emerald-border); margin-top: auto;">
+      <div style="font-size: 10px; color: var(--text-dim); letter-spacing: 1px;">
+        🔥 HOT HORSE — most bets placed<br>
+        <span style="color: var(--green);">▲ SHORTENING</span> &nbsp;|&nbsp; <span style="color: var(--red);">▼ DRIFTING</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Track -->
+  <div id="center-panel">
+    <div id="track-container">
+      <canvas id="race-canvas"></canvas>
+
+      <div id="race-overlay">
+        <div class="overlay-card">
+          <div class="overlay-title">Next Race In</div>
+          <div class="overlay-main" id="overlay-countdown">1:30</div>
+          <div class="overlay-sub" id="overlay-sub">Place your bets — 8 horses at post</div>
+        </div>
+      </div>
+
+      <div id="announcer-box"></div>
+    </div>
+
+    <!-- Results strip -->
+    <div id="results-display">
+      <div style="font-size:10px; letter-spacing:2px; color: var(--gold-dim); text-transform: uppercase; margin-bottom:8px;">Last Race Results</div>
+      <div class="results-grid" id="results-grid">
+        <div style="color: var(--text-dim); font-size:12px; grid-column: span 4; text-align:center; padding: 10px 0;">Awaiting first race...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Bet Slip -->
+  <div class="panel" id="right-panel">
+    <div class="panel-header">
+      <span class="panel-title">Bet Slip</span>
+      <span class="panel-badge" id="bet-count-badge">0 BETS</span>
+    </div>
+
+    <!-- Bet type tabs -->
+    <div class="bet-type-tabs">
+      <div class="bet-tab active" data-type="win" onclick="selectBetType('win',this)">WIN</div>
+      <div class="bet-tab" data-type="place" onclick="selectBetType('place',this)">PLACE</div>
+      <div class="bet-tab" data-type="show" onclick="selectBetType('show',this)">SHOW</div>
+      <div class="bet-tab" data-type="exacta" onclick="selectBetType('exacta',this)">EXACTA</div>
+      <div class="bet-tab" data-type="trifecta" onclick="selectBetType('trifecta',this)">TRI</div>
+    </div>
+
+    <!-- Bet builder -->
+    <div id="bet-builder">
+      <div class="bet-horse-selector">
+        <div class="bet-sel-label" id="horse-sel-label">Select Horse</div>
+        <div class="horse-chips" id="horse-chips-1"></div>
+      </div>
+      <!-- 2nd horse for exacta/trifecta -->
+      <div id="horse-sel-2-wrap" style="display:none; margin-bottom:10px;">
+        <div class="bet-sel-label">2nd Place</div>
+        <div class="horse-chips" id="horse-chips-2"></div>
+      </div>
+      <!-- 3rd horse for trifecta -->
+      <div id="horse-sel-3-wrap" style="display:none; margin-bottom:10px;">
+        <div class="bet-sel-label">3rd Place</div>
+        <div class="horse-chips" id="horse-chips-3"></div>
+      </div>
+
+      <div class="stake-row">
+        <span class="stake-label">Stake</span>
+        <div class="stake-chips">
+          <span class="stake-chip" onclick="setStake(10,this)">$10</span>
+          <span class="stake-chip" onclick="setStake(25,this)">$25</span>
+          <span class="stake-chip" onclick="setStake(50,this)">$50</span>
+          <span class="stake-chip" onclick="setStake(100,this)">$100</span>
+        </div>
+        <input type="number" id="custom-stake" value="25" min="1" max="10000" onchange="updatePayoutPreview()">
+      </div>
+
+      <div id="payout-preview">Potential payout: <span>—</span></div>
+
+      <button class="add-bet-btn" id="add-bet-btn" onclick="addToBetSlip()">＋ Add to Slip</button>
+    </div>
+
+    <!-- Slip/History toggle -->
+    <div class="bet-type-tabs" style="border-top: none; border-bottom: 1px solid var(--emerald-border);">
+      <div class="bet-tab active" id="tab-slip" onclick="toggleBetView('slip')">MY BETS</div>
+      <div class="bet-tab" id="tab-history" onclick="toggleBetView('history')">HISTORY</div>
+    </div>
+
+    <div id="bet-slip-items">
+      <div class="bet-slip-empty">
+        <div class="empty-icon">🎟️</div>
+        Select a horse and bet type above,<br>then add to your slip.
+      </div>
+    </div>
+
+    <div id="bet-history"></div>
+
+    <div id="bet-footer">
+      <div class="bet-total-row">
+        <span class="bet-total-label">Total Stake</span>
+        <span class="bet-total-val" id="total-stake-display">$0.00</span>
+      </div>
+      <div class="bet-total-row">
+        <span class="bet-total-label">Potential Win</span>
+        <span class="bet-potential-val" id="total-potential-display">$0.00</span>
+      </div>
+      <button id="place-bet-btn" onclick="placeBets()" disabled>PLACE BETS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ TICKER -->
+<div id="ticker">
+  <div class="ticker-inner" id="ticker-inner">
+    <span>Welcome to Royal Downs Virtual Racing</span>
+    <span class="ticker-sep">◆</span>
+    <span>8 horses — 90 second cycles — live odds movement</span>
+    <span class="ticker-sep">◆</span>
+    <span class="ticker-hl">Win · Place · Show · Exacta · Trifecta</span>
+    <span class="ticker-sep">◆</span>
+    <span>All wagers simulated — entertainment only</span>
+    <span class="ticker-sep">◆</span>
+    <span class="ticker-win">Race 1 loading...</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ WIN NOTIFICATION -->
+<div id="win-notification">
+  <div class="win-notif-title">🏆 WINNER!</div>
+  <div id="win-notif-horse" style="color: var(--text-bright); font-size:16px; margin: 4px 0;"></div>
+  <div id="win-notif-amount" class="win-notif-amount"></div>
+</div>
+
+<!-- ══════════════════════════════════ FORM GUIDE MODAL -->
+<div id="form-guide" onclick="closeFormGuide(event)">
+  <div class="form-guide-inner">
+    <div class="form-guide-title">
+      <span id="form-guide-title">Form Guide</span>
+      <span class="form-close" onclick="closeFormGuide()">✕</span>
+    </div>
+    <div id="form-guide-content"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// HORSE DATA
+// ═══════════════════════════════════════════════════════════════════════
+const HORSE_NAMES = [
+  "Midnight Fury","Golden Ember","Steel Comet","Velvet Arrow",
+  "Night Gallop","Crimson Blaze","Iron Horizon","Silver Phantom"
+];
+
+const SILK_COLORS = [
+  {primary:'#e53333',secondary:'#ffffff'},  // Red/White
+  {primary:'#f5c518',secondary:'#1a1a1a'},  // Gold/Black
+  {primary:'#3399ff',secondary:'#ffffff'},  // Blue/White
+  {primary:'#9333ea',secondary:'#f5c518'},  // Purple/Gold
+  {primary:'#22c55e',secondary:'#ffffff'},  // Green/White
+  {primary:'#f97316',secondary:'#1a1a1a'},  // Orange/Black
+  {primary:'#06b6d4',secondary:'#ffffff'},  // Cyan/White
+  {primary:'#ffffff',secondary:'#1a1a1a'},  // White/Black
+];
+
+const HORSE_COLORS = [
+  '#2c1a0e','#4a3520','#1a0f08','#6b4423',
+  '#8b6914','#3d2b0a','#c8a97e','#1a1510'
+];
+
+// ═══════════════════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════════════════
+let state = {
+  balance: 1000,
+  raceNumber: 1,
+  phase: 'betting',  // betting | locked | racing | results
+  countdown: 90,
+  horses: [],
+  odds: [],
+  betSlip: [],
+  betHistory: [],
+  placedBets: [],
+  raceResults: [],
+  hotHorse: 0,
+  bettingVolume: new Array(8).fill(0),
+  currentBetType: 'win',
+  selectedHorses: [null,null,null],
+  currentStake: 25,
+  soundEnabled: true,
+  raceTimer: null,
+  oddsTimer: null,
+  raceFrame: null,
+  horsePositions: [],
+  horseVelocities: [],
+  horseY: [],
+  raceFinished: false,
+  finishOrder: [],
+  formHistory: Array.from({length:8},()=>[]),
+  totalRaces: 0,
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// ANNOUNCER LINES
+// ═══════════════════════════════════════════════════════════════════════
+const ANNOUNCE = {
+  preRace: [
+    "And they're loading into the gate…",
+    "The field is set for Race {R}…",
+    "8 horses ready to go at Royal Downs…",
+    "Post time approaching — final bets being accepted…"
+  ],
+  start: [
+    "And they're off!",
+    "The gates fly open!",
+    "They're racing! The field breaks cleanly!",
+  ],
+  mid: [
+    "{H} takes the early lead!",
+    "{H} is out front going into the first turn!",
+    "{H} dictates the early pace!",
+    "It's a tight bunch early, {H} leads!",
+  ],
+  stretch: [
+    "Here comes {H} on the outside!",
+    "{H} is making a dramatic move!",
+    "{H} surges for the wire!",
+    "Down the stretch they come — {H} leads!",
+  ],
+  finish: [
+    "It's {H} by a length!",
+    "{H} wins in a driving finish!",
+    "{H} holds on to win!",
+    "The winner is {H}!",
+    "{H} gets up at the wire!",
+  ]
+};
+
+function getAnnounce(type, horseName) {
+  const lines = ANNOUNCE[type];
+  const line = lines[Math.floor(Math.random()*lines.length)];
+  return line.replace('{H}', horseName).replace('{R}', state.raceNumber);
+}
+
+let announcerTimeout = null;
+function announce(text, duration=4000) {
+  const box = document.getElementById('announcer-box');
+  if (announcerTimeout) clearTimeout(announcerTimeout);
+  box.textContent = text;
+  box.classList.add('visible');
+  announcerTimeout = setTimeout(() => box.classList.remove('visible'), duration);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════
+function initRace() {
+  state.horses = HORSE_NAMES.map((name, i) => ({
+    id: i,
+    name,
+    baseSpeed: 70 + Math.random() * 30,
+    consistency: 60 + Math.random() * 40,
+    lateBurst: 60 + Math.random() * 40,
+    variance: Math.random(),
+    silkColor: SILK_COLORS[i],
+    bodyColor: HORSE_COLORS[i],
+  }));
+
+  state.bettingVolume = new Array(8).fill(0);
+  state.odds = state.horses.map(h => {
+    const rating = (h.baseSpeed * 0.5 + h.consistency * 0.25 + h.lateBurst * 0.25);
+    const maxRating = 95;
+    const norm = rating / maxRating;
+    const base = Math.max(1.5, Math.min(20, (1 / norm) * 4 + Math.random() * 2 - 1));
+    return {
+      win: parseFloat(base.toFixed(1)),
+      place: parseFloat((base * 0.6).toFixed(1)),
+      show: parseFloat((base * 0.4).toFixed(1)),
+      direction: 'neutral',
+    };
+  });
+
+  // Find favorite
+  const minOdds = Math.min(...state.odds.map(o=>o.win));
+  state.favoriteIdx = state.odds.findIndex(o=>o.win===minOdds);
+
+  renderOddsBoard();
+  renderHorseChips();
+  initCanvas();
+  updateTicker(`🏁 Race ${state.raceNumber} now open for betting — ${HORSE_NAMES.join(' · ')}`);
+  updateTrackName();
+}
+
+const TRACKS = ['TURF','DIRT','SYNTHETIC','GRASS','FAST TRACK'];
+function updateTrackName() {
+  document.getElementById('track-name').textContent = TRACKS[Math.floor(Math.random()*TRACKS.length)];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CANVAS + RACE RENDERING
+// ═══════════════════════════════════════════════════════════════════════
+let canvas, ctx;
+const LANE_HEIGHT = 46;
+const TRACK_PADDING_TOP = 30;
+
+function initCanvas() {
+  canvas = document.getElementById('race-canvas');
+  const container = document.getElementById('track-container');
+  canvas.width = container.clientWidth || 680;
+  canvas.height = container.clientHeight || 420;
+  ctx = canvas.getContext('2d');
+
+  // Init horse positions
+  state.horsePositions = new Array(8).fill(0).map(() => 50 + Math.random()*10);
+  state.horseVelocities = state.horses.map(h => (h.baseSpeed / 100) * 3 + 0.5);
+  state.horseY = state.horses.map((_, i) => TRACK_PADDING_TOP + i * LANE_HEIGHT + LANE_HEIGHT/2);
+
+  drawIdleTrack();
+}
+
+function drawIdleTrack() {
+  if (!canvas || !ctx) return;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  const bgGrad = ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,'#030a05');
+  bgGrad.addColorStop(0.4,'#050f07');
+  bgGrad.addColorStop(1,'#071205');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0,0,W,H);
+
+  // Track surface
+  drawTrackSurface(W, H);
+
+  // Draw horses at gate
+  state.horses.forEach((h, i) => {
+    const x = 55;
+    const y = state.horseY[i];
+    drawHorse(x, y, h, false, 0);
+  });
+
+  // Gate
+  drawGate(55, H);
+}
+
+function drawTrackSurface(W, H) {
+  const trackTop = TRACK_PADDING_TOP;
+  const trackH = 8 * LANE_HEIGHT;
+
+  // Main track - dirt
+  const dirt = ctx.createLinearGradient(0, trackTop, 0, trackTop+trackH);
+  dirt.addColorStop(0, '#1a0f06');
+  dirt.addColorStop(1, '#0f0a04');
+  ctx.fillStyle = dirt;
+  ctx.fillRect(0, trackTop, W, trackH);
+
+  // Lane dividers
+  ctx.strokeStyle = 'rgba(201,168,76,0.12)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 8; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, trackTop + i * LANE_HEIGHT);
+    ctx.lineTo(W, trackTop + i * LANE_HEIGHT);
+    ctx.stroke();
+  }
+
+  // Rail top
+  const railGrad = ctx.createLinearGradient(0,0,W,0);
+  railGrad.addColorStop(0, '#3a2a10');
+  railGrad.addColorStop(0.5,'#c9a84c');
+  railGrad.addColorStop(1,'#3a2a10');
+  ctx.fillStyle = railGrad;
+  ctx.fillRect(0, trackTop-6, W, 6);
+  ctx.fillRect(0, trackTop+trackH, W, 6);
+
+  // Finish line
+  const flX = W - 60;
+  for (let i=0;i<trackH;i+=8) {
+    ctx.fillStyle = i%16===0 ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+    ctx.fillRect(flX, trackTop+i, 4, 8);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(flX, trackTop);
+  ctx.lineTo(flX, trackTop+trackH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Lane numbers
+  ctx.font = 'bold 11px Oswald';
+  ctx.textAlign = 'left';
+  for(let i=0;i<8;i++) {
+    ctx.fillStyle = 'rgba(201,168,76,0.5)';
+    ctx.fillText((i+1), 8, TRACK_PADDING_TOP + i*LANE_HEIGHT + LANE_HEIGHT*0.65);
+  }
+
+  // Ground texture dots
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  for(let i=0; i<200; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.random()*W, trackTop+Math.random()*trackH, 0.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawGate(x, H) {
+  const trackH = 8 * LANE_HEIGHT;
+  ctx.fillStyle = 'rgba(120,90,40,0.8)';
+  ctx.fillRect(x-3, TRACK_PADDING_TOP-6, 4, trackH+12);
+  // Gate bars
+  ctx.strokeStyle = 'rgba(200,160,60,0.6)';
+  ctx.lineWidth = 1.5;
+  for(let i=0; i<8; i++) {
+    const y = TRACK_PADDING_TOP + i*LANE_HEIGHT;
+    ctx.beginPath();
+    ctx.moveTo(x-3, y);
+    ctx.lineTo(x-3, y+LANE_HEIGHT);
+    ctx.stroke();
+  }
+}
+
+function drawHorse(x, y, horse, running, speed) {
+  const t = Date.now() / 200;
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Body
+  ctx.fillStyle = horse.bodyColor;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 22, 9, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Legs animation
+  if (running) {
+    const legAnim = Math.sin(t * speed * 3) * 8;
+    ctx.strokeStyle = horse.bodyColor;
+    ctx.lineWidth = 2.5;
+    // Front legs
+    ctx.beginPath();
+    ctx.moveTo(8, 6);
+    ctx.lineTo(12, 6+legAnim);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(6, 6);
+    ctx.lineTo(10, 6-legAnim);
+    ctx.stroke();
+    // Back legs
+    ctx.beginPath();
+    ctx.moveTo(-8, 6);
+    ctx.lineTo(-12, 6-legAnim);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-10, 6);
+    ctx.lineTo(-14, 6+legAnim);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = horse.bodyColor;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(8,6); ctx.lineTo(12,14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5,6); ctx.lineTo(9,14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8,6); ctx.lineTo(-12,14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-11,6); ctx.lineTo(-15,14); ctx.stroke();
+  }
+
+  // Head
+  ctx.fillStyle = horse.bodyColor;
+  ctx.beginPath();
+  ctx.ellipse(22, -4, 8, 5, 0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(26, -6, 1.5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Mane
+  ctx.strokeStyle = '#8B6914';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(10,-6); ctx.lineTo(15,-12);
+  ctx.moveTo(6,-7); ctx.lineTo(11,-13);
+  ctx.stroke();
+
+  // Tail
+  ctx.strokeStyle = '#8B6914';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.quadraticCurveTo(-30, -8, -26, -14);
+  ctx.stroke();
+
+  // Silk (jockey) — saddle cloth
+  ctx.fillStyle = horse.silkColor.primary;
+  ctx.beginPath();
+  ctx.ellipse(0, -8, 8, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Number circle
+  ctx.fillStyle = horse.silkColor.secondary;
+  ctx.beginPath();
+  ctx.arc(0, -8, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = horse.silkColor.primary;
+  ctx.font = 'bold 8px Oswald';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(horse.id+1, 0, -8);
+
+  // Dust particles when running
+  if (running && speed > 1.5) {
+    for(let d=0; d<3; d++) {
+      ctx.fillStyle = `rgba(139,100,20,${0.3 - d*0.08})`;
+      ctx.beginPath();
+      const px = -20 - d*8 + Math.random()*6;
+      const py = 5 + Math.random()*4;
+      ctx.arc(px, py, 2-d*0.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RACE ANIMATION
+// ═══════════════════════════════════════════════════════════════════════
+let animStart = null;
+const RACE_DURATION = 20000; // 20s
+let finishTimes = []; // frame when each horse crosses
+
+function startRaceAnimation() {
+  const W = canvas.width;
+  const finishX = W - 60;
+  const startX = 55;
+  const totalDist = finishX - startX;
+
+  // Compute final scores for finishing order
+  const scores = state.horses.map(h => {
+    return (h.baseSpeed*0.5) + (h.consistency*0.2) + (h.lateBurst*0.2) + (Math.random()*100*0.1);
+  });
+
+  // Sort to get finish order (highest score first)
+  const sortedIdxs = scores.map((s,i)=>({s,i})).sort((a,b)=>b.s-a.s).map(x=>x.i);
+  state.finishOrder = sortedIdxs;
+
+  // Compute each horse's progress profile (0..1 over time)
+  // Each horse has a target time based on their rank
+  const baseTimes = [0.65, 0.70, 0.75, 0.79, 0.83, 0.88, 0.92, 1.0]; // fraction of RACE_DURATION
+  const horseTimes = new Array(8);
+  sortedIdxs.forEach((hi, rank) => {
+    horseTimes[hi] = baseTimes[rank] * RACE_DURATION;
+  });
+
+  state.horsePositions = new Array(8).fill(startX);
+  finishTimes = new Array(8).fill(-1);
+  state.raceFinished = false;
+
+  animStart = null;
+  let announcedMid = false, announcedStretch = false, announcedFinish = false;
+
+  function frame(ts) {
+    if (!animStart) animStart = ts;
+    const elapsed = ts - animStart;
+    const progress = Math.min(1, elapsed / RACE_DURATION);
+
+    canvas.width = canvas.width; // clear
+    const W2 = canvas.width, H2 = canvas.height;
+
+    // Background
+    const bgGrad = ctx.createLinearGradient(0,0,0,H2);
+    bgGrad.addColorStop(0,'#030a05');
+    bgGrad.addColorStop(1,'#071205');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0,0,W2,H2);
+
+    drawTrackSurface(W2,H2);
+
+    // Update positions
+    state.horses.forEach((h, i) => {
+      if (finishTimes[i] >= 0) {
+        state.horsePositions[i] = finishX - 5 + i * 0.5;
+        return;
+      }
+
+      const horseProgress = Math.min(1, elapsed / horseTimes[i]);
+      // Easing: slow start, burst in late
+      const eased = horseProgress < 0.3
+        ? horseProgress * horseProgress * 3.5
+        : horseProgress < 0.7
+          ? 0.315 + (horseProgress - 0.3) * 0.9
+          : 0.675 + (horseProgress - 0.7) * 1.08;
+
+      state.horsePositions[i] = startX + eased * totalDist;
+
+      if (state.horsePositions[i] >= finishX && finishTimes[i] < 0) {
+        finishTimes[i] = elapsed;
+        state.horsePositions[i] = finishX;
+      }
+    });
+
+    // Draw horses back to front (by lane)
+    for(let i=7;i>=0;i--) {
+      const spd = (state.horsePositions[i] - startX) / totalDist * 4 + 0.5;
+      drawHorse(state.horsePositions[i], state.horseY[i], state.horses[i], true, spd);
+    }
+
+    // Announcer triggers
+    if (!announcedMid && progress > 0.3) {
+      announcedMid = true;
+      const leader = state.horsePositions.indexOf(Math.max(...state.horsePositions));
+      announce(getAnnounce('mid', state.horses[leader].name));
+    }
+    if (!announcedStretch && progress > 0.65) {
+      announcedStretch = true;
+      const leader = state.finishOrder[0];
+      announce(getAnnounce('stretch', state.horses[leader].name));
+    }
+    if (!announcedFinish && finishTimes[state.finishOrder[0]] >= 0) {
+      announcedFinish = true;
+      announce(getAnnounce('finish', state.horses[state.finishOrder[0]].name), 6000);
+    }
+
+    const allFinished = finishTimes.every(t => t >= 0);
+    if (!allFinished || progress < 1) {
+      state.raceFrame = requestAnimationFrame(frame);
+    } else {
+      state.raceFinished = true;
+      onRaceFinished();
+    }
+  }
+
+  announce(getAnnounce('start'), 3000);
+  state.raceFrame = requestAnimationFrame(frame);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RACE RESULTS
+// ═══════════════════════════════════════════════════════════════════════
+function onRaceFinished() {
+  state.phase = 'results';
+  setPhaseLabel('RESULTS', '');
+
+  // Record form history
+  state.finishOrder.forEach((horseIdx, rank) => {
+    state.formHistory[horseIdx].unshift(rank+1);
+    if(state.formHistory[horseIdx].length > 5) state.formHistory[horseIdx].pop();
+  });
+
+  // Settle bets
+  const winnings = settleBets();
+
+  // Show results grid
+  showResultsGrid();
+
+  // Update ticker
+  const winner = state.horses[state.finishOrder[0]];
+  const winOdds = state.odds[state.finishOrder[0]].win;
+  const message = `Race ${state.raceNumber} Result: 1st ${winner.name} (${winOdds}) · 2nd ${state.horses[state.finishOrder[1]].name} · 3rd ${state.horses[state.finishOrder[2]].name}`;
+  updateTicker(message);
+
+  // Show win notification if won
+  if (winnings > 0) {
+    showWinNotification(winnings);
+  }
+
+  // Hide overlay already hidden (race was running), show results overlay
+  setTimeout(() => {
+    showOverlay(`Race ${state.raceNumber}`, `${winner.name} WINS!`, 'Post Race · Next in 10s');
+  }, 500);
+
+  // Schedule next race
+  setTimeout(() => {
+    nextRace();
+  }, 10000);
+}
+
+function showResultsGrid() {
+  const grid = document.getElementById('results-grid');
+  const places = ['🥇 1ST','🥈 2ND','🥉 3RD','4TH'];
+  grid.innerHTML = state.finishOrder.slice(0,4).map((hi,rank) => {
+    const h = state.horses[hi];
+    const o = state.odds[hi];
+    return `<div class="result-place">
+      <div class="result-place-label">${places[rank]}</div>
+      <div class="result-horse-name" style="color:${h.silkColor.primary}">${h.name}</div>
+      <div class="result-odds">${o.win}</div>
+    </div>`;
+  }).join('');
+}
+
+function settleBets() {
+  let totalWin = 0;
+
+  state.placedBets.forEach(bet => {
+    let won = false;
+    let payout = 0;
+    const h = bet.horseId;
+    const finPos = state.finishOrder.indexOf(h) + 1;
+
+    if (bet.type === 'win' && finPos === 1) {
+      won = true;
+      payout = bet.stake * state.odds[h].win;
+    } else if (bet.type === 'place' && finPos <= 2) {
+      won = true;
+      payout = bet.stake * state.odds[h].place;
+    } else if (bet.type === 'show' && finPos <= 3) {
+      won = true;
+      payout = bet.stake * state.odds[h].show;
+    } else if (bet.type === 'exacta') {
+      const first = state.finishOrder[0], second = state.finishOrder[1];
+      if (bet.horse1 === first && bet.horse2 === second) {
+        won = true;
+        const base = state.odds[first].win * state.odds[second].win;
+        payout = bet.stake * Math.min(25, Math.max(3, base * 0.6));
+      }
+    } else if (bet.type === 'trifecta') {
+      const [f,s,t] = state.finishOrder;
+      if (bet.horse1 === f && bet.horse2 === s && bet.horse3 === t) {
+        won = true;
+        const base = state.odds[f].win * state.odds[s].win * state.odds[t].win;
+        payout = bet.stake * Math.min(50, Math.max(8, base * 0.3));
+      }
+    }
+
+    const histItem = {
+      ...bet,
+      result: won ? 'win' : 'loss',
+      payout: won ? payout : 0,
+      raceNum: state.raceNumber,
+      horseName: bet.horseName || state.horses[bet.horseId]?.name || 'Multi',
+    };
+    state.betHistory.unshift(histItem);
+
+    if (won) {
+      totalWin += payout;
+      state.balance += payout;
+    }
+  });
+
+  state.placedBets = [];
+  updateBalance();
+  renderBetHistory();
+  return totalWin;
+}
+
+function showWinNotification(amount) {
+  const notif = document.getElementById('win-notification');
+  document.getElementById('win-notif-amount').textContent = `+$${amount.toFixed(2)}`;
+  notif.classList.add('show');
+  playSound('win');
+  setTimeout(() => notif.classList.remove('show'), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RACE CYCLE
+// ═══════════════════════════════════════════════════════════════════════
+function startCountdown() {
+  state.countdown = 90;
+  state.phase = 'betting';
+  setPhaseLabel('BETTING OPEN','');
+  hideOverlay();
+  updateTimerDisplay();
+
+  if (state.raceTimer) clearInterval(state.raceTimer);
+  state.raceTimer = setInterval(() => {
+    state.countdown--;
+    updateTimerDisplay();
+
+    if (state.countdown === 30) {
+      announce(getAnnounce('preRace'), 4000);
+    }
+
+    if (state.countdown === 10) {
+      state.phase = 'locked';
+      setPhaseLabel('BETTING LOCKED','locked');
+      document.getElementById('place-bet-btn').disabled = true;
+      document.getElementById('place-bet-btn').classList.add('locked-state');
+      document.getElementById('place-bet-btn').textContent = 'BETTING LOCKED';
+      document.getElementById('add-bet-btn').disabled = true;
+      announce('🔒 Bets are closed — they\'re at the gate!', 5000);
+    }
+
+    if (state.countdown <= 0) {
+      clearInterval(state.raceTimer);
+      startRace();
+    }
+  }, 1000);
+}
+
+function startRace() {
+  state.phase = 'racing';
+  setPhaseLabel('🏇 RACING','race-on');
+  hideOverlay();
+  showOverlay('', 'THEY\'RE OFF!', '', 1500);
+  setTimeout(() => {
+    hideOverlay();
+    startRaceAnimation();
+  }, 1500);
+}
+
+function nextRace() {
+  if (state.raceFrame) cancelAnimationFrame(state.raceFrame);
+  state.raceNumber++;
+  state.totalRaces++;
+  document.getElementById('race-number').textContent = `R${state.raceNumber}`;
+  state.betSlip = [];
+  state.placedBets = [];
+  renderBetSlip();
+  initRace();
+  startCountdown();
+  hideOverlay();
+  setPhaseLabel('BETTING OPEN','');
+  document.getElementById('place-bet-btn').disabled = false;
+  document.getElementById('place-bet-btn').classList.remove('locked-state');
+  document.getElementById('place-bet-btn').textContent = 'PLACE BETS';
+  document.getElementById('add-bet-btn').disabled = false;
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('race-timer');
+  const m = Math.floor(state.countdown/60);
+  const s = state.countdown%60;
+  el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  el.className = state.phase === 'locked' ? 'locked' : state.phase === 'racing' ? 'race-on' : '';
+
+  // Update overlay countdown too
+  document.getElementById('overlay-countdown').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function setPhaseLabel(text, cls) {
+  const el = document.getElementById('phase-label');
+  el.textContent = text;
+  el.style.color = cls === 'locked' ? 'var(--red)' : cls === 'race-on' ? 'var(--green)' : 'var(--text-dim)';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// OVERLAY
+// ═══════════════════════════════════════════════════════════════════════
+function showOverlay(title, main, sub, autoDismiss=0) {
+  const overlay = document.getElementById('race-overlay');
+  document.querySelector('.overlay-title').textContent = title;
+  document.querySelector('.overlay-main').textContent = main;
+  document.querySelector('.overlay-sub').textContent = sub;
+  overlay.style.opacity = '1';
+  overlay.style.pointerEvents = 'all';
+  if (autoDismiss) setTimeout(hideOverlay, autoDismiss);
+}
+
+function hideOverlay() {
+  const overlay = document.getElementById('race-overlay');
+  overlay.style.opacity = '0';
+  overlay.style.pointerEvents = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ODDS BOARD
+// ═══════════════════════════════════════════════════════════════════════
+function renderOddsBoard() {
+  const tbody = document.getElementById('odds-tbody');
+  const hotIdx = state.bettingVolume.indexOf(Math.max(...state.bettingVolume));
+
+  tbody.innerHTML = state.horses.map((h, i) => {
+    const o = state.odds[i];
+    const isHot = i === hotIdx && state.bettingVolume[i] > 0;
+    const isFav = i === state.favoriteIdx;
+    const rowClass = `odds-row${isHot?' hot':''}${isFav?' favorite':''}`;
+
+    return `<tr class="${rowClass}" data-idx="${i}" onclick="showFormGuide(${i})">
+      <td>
+        <div class="horse-name-cell">
+          <span class="horse-num" style="background:${h.silkColor.primary};color:${h.silkColor.secondary}">${i+1}</span>
+          ${isHot ? '<span class="hot-icon">🔥</span>' : ''}
+          ${h.name}
+        </div>
+      </td>
+      <td><span class="odds-val ${o.direction}" id="odds-w-${i}">${o.win}</span></td>
+      <td><span class="odds-val neutral" id="odds-p-${i}">${o.place}</span></td>
+      <td><span class="odds-val neutral" id="odds-s-${i}">${o.show}</span></td>
+      <td>
+        <div class="quick-bet-btns">
+          <button class="qb-btn qb-w" onclick="event.stopPropagation();quickBet(${i},'win')">W</button>
+          <button class="qb-btn qb-p" onclick="event.stopPropagation();quickBet(${i},'place')">P</button>
+          <button class="qb-btn qb-s" onclick="event.stopPropagation();quickBet(${i},'show')">S</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function quickBet(horseIdx, type) {
+  if (state.phase === 'locked' || state.phase === 'racing') return;
+  selectBetType(type, document.querySelector(`.bet-tab[data-type="${type}"]`));
+  selectHorseChip(horseIdx, 0);
+  addToBetSlip();
+  playSound('chip');
+}
+
+// Odds drift every 5 seconds
+function startOddsUpdate() {
+  if (state.oddsTimer) clearInterval(state.oddsTimer);
+  state.oddsTimer = setInterval(() => {
+    if (state.phase !== 'betting') return;
+    updateOdds();
+  }, 5000);
+}
+
+function updateOdds() {
+  const prev = state.odds.map(o => ({...o}));
+
+  state.odds.forEach((o, i) => {
+    // Volume impact
+    const vol = state.bettingVolume[i];
+    const totalVol = state.bettingVolume.reduce((a,b)=>a+b,0) || 1;
+    const share = vol / totalVol;
+
+    // Popular horses shorten; unpopular drift
+    const drift = (share - 1/8) * 0.4 + (Math.random()-0.5)*0.3;
+    const newWin = Math.max(1.5, Math.min(25, o.win - drift));
+
+    o.direction = newWin < prev[i].win ? 'down' : newWin > prev[i].win ? 'up' : 'neutral';
+    o.win = parseFloat(newWin.toFixed(1));
+    o.place = parseFloat((o.win * 0.6).toFixed(1));
+    o.show = parseFloat((o.win * 0.4).toFixed(1));
+
+    // Flash update
+    const el = document.getElementById(`odds-w-${i}`);
+    if (el) {
+      el.textContent = o.win;
+      el.className = `odds-val ${o.direction}`;
+      setTimeout(() => { if(el) el.className = 'odds-val neutral'; }, 1000);
+    }
+  });
+
+  // Recalc favorite
+  const minOdds = Math.min(...state.odds.map(o=>o.win));
+  state.favoriteIdx = state.odds.findIndex(o=>o.win===minOdds);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// BET SYSTEM UI
+// ═══════════════════════════════════════════════════════════════════════
+function renderHorseChips() {
+  ['horse-chips-1','horse-chips-2','horse-chips-3'].forEach(id => {
+    const container = document.getElementById(id);
+    if (!container) return;
+    container.innerHTML = state.horses.map((h, i) =>
+      `<span class="horse-chip" data-idx="${i}" onclick="selectHorseChip(${i},${id.slice(-1)-1})">${i+1}.${h.name.split(' ')[0]}</span>`
+    ).join('');
+  });
+}
+
+function selectHorseChip(idx, slot) {
+  state.selectedHorses[slot] = idx;
+  const chips = document.querySelectorAll(`#horse-chips-${slot+1} .horse-chip`);
+  chips.forEach(c => {
+    c.classList.toggle('selected', parseInt(c.dataset.idx) === idx);
+  });
+  updatePayoutPreview();
+}
+
+function selectBetType(type, el) {
+  state.currentBetType = type;
+  document.querySelectorAll('.bet-tab[data-type]').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const isExacta = type === 'exacta' || type === 'trifecta';
+  const isTrifecta = type === 'trifecta';
+
+  document.getElementById('horse-sel-label').textContent = type === 'win' ? 'Select Horse to Win' :
+    type === 'place' ? 'Select Horse to Place (1st/2nd)' :
+    type === 'show' ? 'Select Horse to Show (top 3)' :
+    type === 'exacta' ? '1st Place Horse' : '1st Place Horse';
+
+  document.getElementById('horse-sel-2-wrap').style.display = isExacta ? 'block' : 'none';
+  document.getElementById('horse-sel-3-wrap').style.display = isTrifecta ? 'block' : 'none';
+
+  // Reset selections
+  state.selectedHorses = [null,null,null];
+  document.querySelectorAll('.horse-chip').forEach(c=>c.classList.remove('selected'));
+  updatePayoutPreview();
+}
+
+function setStake(amount, el) {
+  state.currentStake = amount;
+  document.getElementById('custom-stake').value = amount;
+  document.querySelectorAll('.stake-chip').forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+  updatePayoutPreview();
+}
+
+function updatePayoutPreview() {
+  state.currentStake = parseFloat(document.getElementById('custom-stake').value) || 25;
+  const type = state.currentBetType;
+  const h1 = state.selectedHorses[0];
+
+  let preview = '—';
+  if (h1 !== null && type === 'win') preview = `$${(state.currentStake * state.odds[h1].win).toFixed(2)}`;
+  else if (h1 !== null && type === 'place') preview = `$${(state.currentStake * state.odds[h1].place).toFixed(2)}`;
+  else if (h1 !== null && type === 'show') preview = `$${(state.currentStake * state.odds[h1].show).toFixed(2)}`;
+  else if (type === 'exacta' && h1!==null && state.selectedHorses[1]!==null) {
+    const base = state.odds[h1].win * state.odds[state.selectedHorses[1]].win;
+    preview = `$${(state.currentStake * Math.min(25, Math.max(3, base*0.6))).toFixed(2)}`;
+  } else if (type === 'trifecta' && h1!==null && state.selectedHorses[1]!==null && state.selectedHorses[2]!==null) {
+    const base = state.odds[h1].win * state.odds[state.selectedHorses[1]].win * state.odds[state.selectedHorses[2]].win;
+    preview = `$${(state.currentStake * Math.min(50, Math.max(8, base*0.3))).toFixed(2)}`;
+  }
+
+  document.querySelector('#payout-preview span').textContent = preview;
+}
+
+function addToBetSlip() {
+  if (state.phase === 'locked' || state.phase === 'racing') return;
+  const type = state.currentBetType;
+  const stake = parseFloat(document.getElementById('custom-stake').value) || 25;
+  const h1 = state.selectedHorses[0];
+  const h2 = state.selectedHorses[1];
+  const h3 = state.selectedHorses[2];
+
+  if (h1 === null) { flashError('Please select a horse'); return; }
+  if ((type === 'exacta' || type === 'trifecta') && h2 === null) { flashError('Select 2nd place horse'); return; }
+  if (type === 'trifecta' && h3 === null) { flashError('Select 3rd place horse'); return; }
+  if (type === 'exacta' && h1 === h2) { flashError('Choose different horses'); return; }
+  if (type === 'trifecta' && (h1===h2||h2===h3||h1===h3)) { flashError('Choose different horses'); return; }
+
+  let bet = { id: Date.now(), type, stake };
+  let label = '';
+  let payout = 0;
+
+  if (type === 'win' || type === 'place' || type === 'show') {
+    bet.horseId = h1;
+    bet.horseName = state.horses[h1].name;
+    const o = state.odds[h1];
+    payout = stake * (type==='win'?o.win:type==='place'?o.place:o.show);
+    label = `${state.horses[h1].name}`;
+  } else if (type === 'exacta') {
+    bet.horse1 = h1; bet.horse2 = h2;
+    bet.horseName = `${h1+1}-${h2+1}`;
+    const base = state.odds[h1].win * state.odds[h2].win;
+    payout = stake * Math.min(25, Math.max(3, base*0.6));
+    label = `${state.horses[h1].name} → ${state.horses[h2].name}`;
+  } else {
+    bet.horse1 = h1; bet.horse2 = h2; bet.horse3 = h3;
+    bet.horseName = `${h1+1}-${h2+1}-${h3+1}`;
+    const base = state.odds[h1].win * state.odds[h2].win * state.odds[h3].win;
+    payout = stake * Math.min(50, Math.max(8, base*0.3));
+    label = `${state.horses[h1].name}→${state.horses[h2].name}→${state.horses[h3].name}`;
+  }
+
+  bet.estimatedPayout = payout;
+  bet.label = label;
+  state.betSlip.push(bet);
+
+  // Add volume
+  if (bet.horseId !== undefined) state.bettingVolume[bet.horseId] += stake;
+  else state.bettingVolume[h1] += stake;
+
+  renderBetSlip();
+  renderOddsBoard();
+  playSound('chip');
+
+  // Button flash
+  const btn = document.getElementById('add-bet-btn');
+  btn.classList.add('bet-confirm-flash');
+  setTimeout(()=>btn.classList.remove('bet-confirm-flash'),300);
+}
+
+function removeBetItem(id) {
+  state.betSlip = state.betSlip.filter(b => b.id !== id);
+  renderBetSlip();
+}
+
+function renderBetSlip() {
+  const container = document.getElementById('bet-slip-items');
+  const badge = document.getElementById('bet-count-badge');
+  badge.textContent = `${state.betSlip.length} BET${state.betSlip.length!==1?'S':''}`;
+
+  if (state.betSlip.length === 0) {
+    container.innerHTML = `<div class="bet-slip-empty">
+      <div class="empty-icon">🎟️</div>
+      Select a horse and bet type above,<br>then add to your slip.
+    </div>`;
+    document.getElementById('total-stake-display').textContent = '$0.00';
+    document.getElementById('total-potential-display').textContent = '$0.00';
+    document.getElementById('place-bet-btn').disabled = true;
+    return;
+  }
+
+  container.innerHTML = state.betSlip.map(bet => `
+    <div class="bet-item" id="bet-item-${bet.id}">
+      <div class="bet-item-left">
+        <div class="bet-item-type">${bet.type.toUpperCase()}</div>
+        <div class="bet-item-horse">${bet.label}</div>
+        <div class="bet-item-stake">$${bet.stake.toFixed(2)} → <span class="bet-item-payout">~$${bet.estimatedPayout.toFixed(2)}</span></div>
+      </div>
+      <button class="bet-remove" onclick="removeBetItem(${bet.id})">✕</button>
+    </div>
+  `).join('');
+
+  const totalStake = state.betSlip.reduce((a,b)=>a+b.stake,0);
+  const totalPotential = state.betSlip.reduce((a,b)=>a+b.estimatedPayout,0);
+  document.getElementById('total-stake-display').textContent = `$${totalStake.toFixed(2)}`;
+  document.getElementById('total-potential-display').textContent = `~$${totalPotential.toFixed(2)}`;
+
+  if (state.phase !== 'locked' && state.phase !== 'racing') {
+    document.getElementById('place-bet-btn').disabled = false;
+  }
+}
+
+function placeBets() {
+  if (state.betSlip.length === 0) return;
+  if (state.phase === 'locked' || state.phase === 'racing') return;
+
+  const totalStake = state.betSlip.reduce((a,b)=>a+b.stake,0);
+  if (totalStake > state.balance) { flashError('Insufficient balance'); return; }
+
+  state.balance -= totalStake;
+  state.placedBets = [...state.placedBets, ...state.betSlip];
+  state.betSlip = [];
+
+  updateBalance();
+  renderBetSlip();
+  playSound('place');
+
+  const btn = document.getElementById('place-bet-btn');
+  btn.textContent = '✓ BETS PLACED';
+  btn.style.background = 'linear-gradient(135deg, #1a5a1a, #0d3a0d)';
+  setTimeout(() => {
+    btn.textContent = 'PLACE BETS';
+    btn.style.background = '';
+  }, 2000);
+}
+
+function toggleBetView(view) {
+  const slip = document.getElementById('bet-slip-items');
+  const hist = document.getElementById('bet-history');
+  const tabSlip = document.getElementById('tab-slip');
+  const tabHist = document.getElementById('tab-history');
+
+  if (view === 'slip') {
+    slip.style.display = 'block';
+    hist.style.display = 'none';
+    tabSlip.classList.add('active');
+    tabHist.classList.remove('active');
+  } else {
+    slip.style.display = 'none';
+    hist.style.display = 'block';
+    tabSlip.classList.remove('active');
+    tabHist.classList.add('active');
+  }
+}
+
+function renderBetHistory() {
+  const container = document.getElementById('bet-history');
+  if (state.betHistory.length === 0) {
+    container.innerHTML = `<div class="bet-slip-empty"><div class="empty-icon">📋</div>No bet history yet.</div>`;
+    return;
+  }
+
+  container.innerHTML = state.betHistory.slice(0,20).map(b => `
+    <div class="history-item ${b.result}">
+      <div>
+        <div class="history-horse">${b.horseName}</div>
+        <div class="history-type">${b.type.toUpperCase()} · R${b.raceNum}</div>
+      </div>
+      <div class="history-amount ${b.result}">
+        ${b.result==='win' ? '+$'+b.payout.toFixed(2) : '-$'+b.stake.toFixed(2)}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// BALANCE
+// ═══════════════════════════════════════════════════════════════════════
+function updateBalance() {
+  document.getElementById('balance-display').textContent = `$${state.balance.toFixed(2)}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TICKER
+// ═══════════════════════════════════════════════════════════════════════
+let tickerMessages = [];
+function updateTicker(msg) {
+  tickerMessages.push(msg);
+  if (tickerMessages.length > 5) tickerMessages.shift();
+  const inner = document.getElementById('ticker-inner');
+  inner.innerHTML = tickerMessages.map((m,i) =>
+    `<span ${i>0?'class="ticker-hl"':''}>${m}</span><span class="ticker-sep">◆</span>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FORM GUIDE
+// ═══════════════════════════════════════════════════════════════════════
+function showFormGuide(idx) {
+  if (idx === undefined) {
+    // Show all
+    idx = 0;
+  }
+  const h = state.horses[idx];
+  const o = state.odds[idx];
+  const hist = state.formHistory[idx];
+
+  document.getElementById('form-guide-title').textContent = `📊 ${h.name} — Form Guide`;
+  const colors = ['#ffd700','#c0c0c0','#cd7f32','#888','#666'];
+
+  document.getElementById('form-guide-content').innerHTML = `
+    <div class="form-stat-row"><span class="form-stat-label">Current Win Odds</span><span class="form-stat-val">${o.win}</span></div>
+    <div class="form-stat-row"><span class="form-stat-label">Place Odds</span><span class="form-stat-val">${o.place}</span></div>
+    <div class="form-stat-row"><span class="form-stat-label">Show Odds</span><span class="form-stat-val">${o.show}</span></div>
+    <div class="form-stat-row"><span class="form-stat-label">Base Speed Rating</span><span class="form-stat-val">${h.baseSpeed.toFixed(1)}</span></div>
+    <div class="form-stat-row"><span class="form-stat-label">Consistency</span><span class="form-stat-val">${h.consistency.toFixed(1)}</span></div>
+    <div class="form-stat-row"><span class="form-stat-label">Late Burst</span><span class="form-stat-val">${h.lateBurst.toFixed(1)}</span></div>
+    <div class="form-stat-row"><span class="form-stat-label">Win %</span><span class="form-stat-val">${hist.length ? ((hist.filter(p=>p===1).length/hist.length)*100).toFixed(0)+'%' : 'N/A'}</span></div>
+    <div class="form-last-races" style="margin-top:16px;">
+      <div class="form-stat-label" style="margin-bottom:8px;">Last ${hist.length} Race Results</div>
+      ${hist.length === 0 ? '<span style="color:var(--text-dim);font-size:13px">No races yet</span>' :
+        hist.map(pos => `<span class="form-race-dot" style="background:${colors[Math.min(pos-1,4)]};color:${pos<=2?'#000':'#fff'}">${pos}</span>`).join('')}
+    </div>
+  `;
+
+  document.getElementById('form-guide').classList.add('open');
+}
+
+function closeFormGuide(e) {
+  if (!e || e.target === document.getElementById('form-guide') || e.target.classList.contains('form-close')) {
+    document.getElementById('form-guide').classList.remove('open');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SOUND (Web Audio API — no external files needed)
+// ═══════════════════════════════════════════════════════════════════════
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSound(type) {
+  if (!state.soundEnabled) return;
+  try {
+    const ac = getAudioCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain);
+    gain.connect(ac.destination);
+
+    if (type === 'chip') {
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.1);
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime+0.1);
+    } else if (type === 'place') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, ac.currentTime);
+      osc.frequency.setValueAtTime(660, ac.currentTime+0.1);
+      osc.frequency.setValueAtTime(880, ac.currentTime+0.2);
+      gain.gain.setValueAtTime(0.2, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.35);
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime+0.35);
+    } else if (type === 'win') {
+      osc.type = 'square';
+      [523,659,784,1047].forEach((f,i) => {
+        const o2 = ac.createOscillator();
+        const g2 = ac.createGain();
+        o2.connect(g2); g2.connect(ac.destination);
+        o2.frequency.value = f;
+        g2.gain.setValueAtTime(0.1, ac.currentTime+i*0.1);
+        g2.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+i*0.1+0.3);
+        o2.start(ac.currentTime+i*0.1);
+        o2.stop(ac.currentTime+i*0.1+0.3);
+      });
+      osc.stop(ac.currentTime);
+    }
+  } catch(e) {}
+}
+
+document.getElementById('sound-btn').addEventListener('click', () => {
+  state.soundEnabled = !state.soundEnabled;
+  document.getElementById('sound-btn').textContent = state.soundEnabled ? '🔊' : '🔇';
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+function flashError(msg) {
+  const btn = document.getElementById('add-bet-btn');
+  const orig = btn.textContent;
+  btn.textContent = msg;
+  btn.style.borderColor = 'var(--red)';
+  btn.style.color = 'var(--red)';
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.style.borderColor = '';
+    btn.style.color = '';
+  }, 1500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RESIZE HANDLER
+// ═══════════════════════════════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  if (canvas && state.phase !== 'racing') {
+    const container = document.getElementById('track-container');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    state.horseY = state.horses.map((_, i) => TRACK_PADDING_TOP + i * LANE_HEIGHT + LANE_HEIGHT/2);
+    drawIdleTrack();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  initRace();
+  startCountdown();
+  startOddsUpdate();
+
+  // Show welcome overlay for 3s
+  showOverlay('Royal Downs', 'WELCOME', 'Virtual Horse Racing — Entertainment Only', 3000);
+  setTimeout(() => {
+    announce('🎙️ Welcome to Royal Downs! Place your bets for Race 1!', 5000);
+  }, 1000);
+});
+
+// Custom stake input
+document.getElementById('custom-stake').addEventListener('input', updatePayoutPreview);
+</script>
+</body>
+</html>
