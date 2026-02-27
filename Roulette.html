@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Roulette Arcade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Bebas+Neue&display=swap');
+
+        :root {
+            --casino-green: #0B5E2A;
+            --casino-green-dark: #063d1b;
+            --gold: #D4AF37;
+            --red: #C62828;
+            --black: #121212;
+            --ui-bg: #1A1A1A;
+        }
+
+        body {
+            background-color: #0d0d0d;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .bebas { font-family: 'Bebas Neue', cursive; }
+
+        /* Wheel Styles */
+        #wheel-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            perspective: 1000px;
+        }
+
+        #wheel-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
+            border: 8px solid #2a2a2a;
+        }
+
+        /* Betting Table Styles */
+        .betting-table {
+            background-color: var(--casino-green);
+            border: 4px solid #ffffff22;
+            border-radius: 8px;
+            display: grid;
+            padding: 10px;
+            gap: 2px;
+            position: relative;
+        }
+
+        .table-cell {
+            background-color: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            min-height: 50px;
+        }
+
+        .table-cell:hover {
+            background-color: rgba(255,255,255,0.2);
+            box-shadow: inset 0 0 15px var(--gold);
+        }
+
+        .num-red { color: #ff4d4d; }
+        .num-black { color: #ffffff; }
+        .num-green { color: #00ff00; }
+
+        /* Chip Styles */
+        .chip {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px dashed rgba(255,255,255,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .chip.active {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 10px 15px rgba(212, 175, 55, 0.4);
+            border-color: var(--gold);
+        }
+
+        .placed-chip {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            color: black;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+            border: 2px solid #000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Animations */
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+        }
+
+        .winner-flash {
+            animation: pulse-gold 1s infinite;
+            z-index: 20;
+            border: 2px solid var(--gold) !important;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #121212; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        
+        .mode-toggle {
+            background: #2a2a2a;
+            border-radius: 20px;
+            padding: 4px;
+            display: flex;
+            gap: 4px;
+        }
+        .mode-btn {
+            padding: 4px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .mode-btn.active {
+            background: var(--gold);
+            color: black;
+        }
+
+        .glass-panel {
+            background: rgba(26, 26, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Top Nav -->
+    <nav class="h-16 flex items-center justify-between px-8 border-b border-white/10 glass-panel">
+        <div class="flex items-center gap-4">
+            <span class="bebas text-3xl tracking-widest text-white">ROULETTE<span class="text-[var(--gold)]">.ARCADE</span></span>
+            <div class="mode-toggle ml-6">
+                <button onclick="setMode('european')" id="btn-euro" class="mode-btn active">EUROPEAN</button>
+                <button onclick="setMode('american')" id="btn-amer" class="mode-btn">AMERICAN</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-8">
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] text-white/50 uppercase tracking-tighter">Current Balance</span>
+                <span id="balance-display" class="bebas text-2xl text-[var(--gold)]">$10,000</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Chips -->
+        <aside class="w-24 border-r border-white/10 flex flex-col items-center py-8 gap-6 glass-panel">
+            <div class="flex flex-col gap-4" id="chip-selector">
+                <div onclick="selectChip(1, this)" class="chip bg-white text-black border-gray-400">1</div>
+                <div onclick="selectChip(5, this)" class="chip bg-blue-600 text-white border-blue-400">5</div>
+                <div onclick="selectChip(25, this)" class="chip bg-green-600 text-white border-green-400">25</div>
+                <div onclick="selectChip(100, this)" class="chip bg-black text-[var(--gold)] border-gray-700 active">100</div>
+                <div onclick="selectChip(500, this)" class="chip bg-purple-600 text-white border-purple-400">500</div>
+            </div>
+            <div class="mt-auto flex flex-col gap-4">
+                <button onclick="undoBet()" class="w-12 h-12 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-xs">UNDO</button>
+                <button onclick="clearBets()" class="w-12 h-12 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-400 flex items-center justify-center text-xs">CLEAR</button>
+            </div>
+        </aside>
+
+        <!-- Center Stage: Wheel & Table -->
+        <section class="flex-1 flex flex-col items-center justify-between py-6 overflow-y-auto custom-scroll bg-[radial-gradient(circle_at_center,_#1a1a1a_0%,_#050505_100%)]">
+            
+            <!-- Physics Wheel -->
+            <div id="wheel-container">
+                <canvas id="wheel-canvas"></canvas>
+                <div id="ball-container" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
+                    <div id="ball" style="position: absolute; width: 14px; height: 14px; background: radial-gradient(circle at 30% 30%, #fff, #999); border-radius: 50%; display: none; box-shadow: 0 0 10px rgba(255,255,255,0.8); z-index: 50;"></div>
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-20 h-20 rounded-full bg-[#111] border-2 border-white/10 shadow-2xl flex items-center justify-center">
+                        <div id="win-indicator" class="bebas text-3xl text-[var(--gold)]">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spin Controls -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="flex gap-4">
+                    <button id="spin-btn" onclick="spin()" class="px-12 py-3 bg-[var(--gold)] text-black rounded-full bebas text-2xl tracking-widest hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition-all transform active:scale-95">SPIN</button>
+                    <button id="auto-btn" onclick="toggleAuto()" class="px-8 py-3 bg-white/5 border border-white/10 rounded-full bebas text-xl tracking-widest hover:bg-white/10 transition-all">AUTO</button>
+                </div>
+                <p id="bet-error" class="text-red-500 text-xs font-bold opacity-0 transition-opacity">PLACE A BET FIRST</p>
+            </div>
+
+            <!-- Betting Table -->
+            <div id="betting-table-container" class="w-full max-w-4xl px-4 pb-8">
+                <!-- Table injected via JS -->
+            </div>
+
+        </section>
+
+        <!-- Right Panel: Analytics -->
+        <aside class="w-72 border-l border-white/10 glass-panel flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center">
+                <h3 class="bebas text-xl tracking-wider text-white/70">ANALYTICS</h3>
+                <span class="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded">LIVE</span>
+            </div>
+            
+            <!-- Hot / Cold -->
+            <div class="p-4 flex flex-col gap-4">
+                <div>
+                    <span class="text-[10px] text-white/40 font-bold uppercase block mb-2">🔥 Hot Numbers</span>
+                    <div id="hot-numbers" class="flex gap-2 min-h-[32px]">
+                        <!-- Injected -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-4">
+                <span class="text-[10px] text-white/40 font-bold uppercase block mb-2">Bet History</span>
+                <div id="bet-history" class="flex flex-col gap-2">
+                    <!-- History rows -->
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // --- GAME STATE ---
+        const state = {
+            mode: 'european',
+            balance: 10000,
+            selectedChip: 100,
+            bets: [], 
+            history: [],
+            isSpinning: false,
+            isAuto: false,
+            wheelAngle: 0,
+            ballAngle: 0,
+            lastWin: null
+        };
+
+        const WHEEL_LAYOUT = {
+            european: [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26],
+            american: [0, 28, 9, 26, 30, 11, 7, 20, 32, 17, 5, 22, 34, 15, 3, 24, 36, 13, 1, '00', 27, 10, 25, 29, 12, 8, 19, 31, 18, 6, 21, 33, 16, 4, 23, 35, 14, 2]
+        };
+
+        const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 800;
+
+        // --- INITIALIZATION ---
+        function init() {
+            renderTable();
+            drawWheel();
+            updateUI();
+        }
+
+        // --- WHEEL ENGINE ---
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 20;
+            const layout = WHEEL_LAYOUT[state.mode];
+            const slice = (Math.PI * 2) / layout.length;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(state.wheelAngle);
+
+            layout.forEach((num, i) => {
+                const angle = i * slice;
+                
+                // Draw slice
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, angle, angle + slice);
+                ctx.closePath();
+                
+                let color = '#1a1a1a';
+                if (num === 0 || num === '00') color = '#008000';
+                else if (RED_NUMS.includes(num)) color = '#c62828';
+                
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Draw Text
+                ctx.save();
+                ctx.rotate(angle + slice / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "white";
+                ctx.font = "bold 28px Inter";
+                ctx.fillText(num, radius - 30, 10);
+                ctx.restore();
+            });
+
+            // Center cover
+            ctx.beginPath();
+            ctx.arc(0, 0, radius - 80, 0, Math.PI * 2);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function spin() {
+            if (state.isSpinning) return;
+            
+            const errorLabel = document.getElementById('bet-error');
+            if (state.bets.length === 0) {
+                errorLabel.style.opacity = '1';
+                setTimeout(() => errorLabel.style.opacity = '0', 2000);
+                return;
+            }
+            
+            state.isSpinning = true;
+            document.getElementById('spin-btn').disabled = true;
+            document.getElementById('win-indicator').textContent = '...';
+            
+            const ball = document.getElementById('ball');
+            ball.style.display = 'block';
+
+            let wheelVel = 0.15 + Math.random() * 0.05;
+            let ballVel = -0.2 - Math.random() * 0.1;
+            let ballRadius = 360;
+            
+            const startTime = performance.now();
+            const duration = 5000 + Math.random() * 2000;
+
+            function animate(now) {
+                const elapsed = now - startTime;
+                const progress = elapsed / duration;
+
+                if (progress < 1) {
+                    // Physics
+                    const easing = 1 - Math.pow(progress, 3);
+                    wheelVel *= 0.994;
+                    ballVel *= 0.988;
+                    
+                    state.wheelAngle += wheelVel;
+                    state.ballAngle += ballVel;
+
+                    // Ball drops inward at the end
+                    if (progress > 0.6) {
+                        const dropProgress = (progress - 0.6) / 0.4;
+                        ballRadius = 360 - (dropProgress * 100);
+                    }
+
+                    drawWheel();
+                    
+                    const bx = 200 + Math.cos(state.ballAngle) * ballRadius / 2;
+                    const by = 200 + Math.sin(state.ballAngle) * ballRadius / 2;
+                    ball.style.left = (bx - 7) + 'px';
+                    ball.style.top = (by - 7) + 'px';
+
+                    requestAnimationFrame(animate);
+                } else {
+                    finalizeSpin();
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function finalizeSpin() {
+            const layout = WHEEL_LAYOUT[state.mode];
+            const slice = (Math.PI * 2) / layout.length;
+            
+            // Calculate which segment the ball landed in
+            let relativeAngle = (state.ballAngle - state.wheelAngle) % (Math.PI * 2);
+            if (relativeAngle < 0) relativeAngle += Math.PI * 2;
+            
+            const index = Math.floor(relativeAngle / slice);
+            const winNum = layout[index];
+
+            state.isSpinning = false;
+            state.lastWin = winNum;
+            document.getElementById('win-indicator').textContent = winNum;
+            document.getElementById('spin-btn').disabled = false;
+            
+            evaluateBets(winNum);
+            updateAnalytics();
+
+            if (state.isAuto && state.balance > 0) {
+                setTimeout(spin, 3000);
+            } else if (state.isAuto) {
+                toggleAuto(); // Stop auto if broke
+            }
+        }
+
+        // --- BETTING ENGINE ---
+        function renderTable() {
+            const container = document.getElementById('betting-table-container');
+            const isAm = state.mode === 'american';
+            
+            let html = `
+                <div class="betting-table" style="grid-template-columns: repeat(${isAm ? 14 : 13}, 1fr);">
+                    <!-- 0 and 00 -->
+                    <div onclick="placeBet('num', 0)" class="table-cell num-green" style="grid-row: 1 / span ${isAm ? 1 : 3}; grid-column: 1;">0</div>
+                    ${isAm ? `<div onclick="placeBet('num', '00')" class="table-cell num-green" style="grid-row: 2 / span 2; grid-column: 1;">00</div>` : ''}
+            `;
+
+            // Numbers 1-36
+            for (let i = 1; i <= 36; i++) {
+                const colorClass = RED_NUMS.includes(i) ? 'num-red' : 'num-black';
+                const col = Math.ceil(i / 3) + 1;
+                const row = 3 - ((i - 1) % 3);
+                html += `<div onclick="placeBet('num', ${i})" class="table-cell ${colorClass}" style="grid-column: ${col}; grid-row: ${row}">${i}</div>`;
+            }
+
+            // Outside bets
+            const offset = 2;
+            html += `
+                <div onclick="placeBet('dozen', '1st')" class="table-cell text-[10px] col-start-${offset} col-span-4" style="grid-row: 4">1st 12</div>
+                <div onclick="placeBet('dozen', '2nd')" class="table-cell text-[10px] col-span-4" style="grid-row: 4">2nd 12</div>
+                <div onclick="placeBet('dozen', '3rd')" class="table-cell text-[10px] col-span-4" style="grid-row: 4">3rd 12</div>
+                
+                <div onclick="placeBet('half', 'low')" class="table-cell text-[10px] col-start-${offset} col-span-2" style="grid-row: 5">1-18</div>
+                <div onclick="placeBet('parity', 'even')" class="table-cell text-[10px] col-span-2" style="grid-row: 5">EVEN</div>
+                <div onclick="placeBet('color', 'red')" class="table-cell text-[10px] col-span-2 bg-red-600/30" style="grid-row: 5">RED</div>
+                <div onclick="placeBet('color', 'black')" class="table-cell text-[10px] col-span-2 bg-black/50" style="grid-row: 5">BLACK</div>
+                <div onclick="placeBet('parity', 'odd')" class="table-cell text-[10px] col-span-2" style="grid-row: 5">ODD</div>
+                <div onclick="placeBet('half', 'high')" class="table-cell text-[10px] col-span-2" style="grid-row: 5">19-36</div>
+            `;
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function placeBet(type, value) {
+            if (state.isSpinning) return;
+            if (state.balance < state.selectedChip) return;
+
+            state.balance -= state.selectedChip;
+            
+            const target = event.currentTarget;
+            const chipEl = document.createElement('div');
+            chipEl.className = 'placed-chip';
+            chipEl.textContent = state.selectedChip >= 1000 ? (state.selectedChip/1000)+'K' : state.selectedChip;
+            target.appendChild(chipEl);
+
+            state.bets.push({
+                type,
+                value,
+                amount: state.selectedChip,
+                el: chipEl
+            });
+
+            updateUI();
+        }
+
+        function evaluateBets(winNum) {
+            let totalWin = 0;
+            const isRed = RED_NUMS.includes(winNum);
+            const isEven = winNum !== 0 && winNum !== '00' && winNum % 2 === 0;
+
+            state.bets.forEach(bet => {
+                let won = false;
+                let multiplier = 0;
+
+                if (bet.type === 'num') {
+                    if (bet.value == winNum) { won = true; multiplier = 36; }
+                } else if (bet.type === 'color') {
+                    if (bet.value === 'red' && isRed) { won = true; multiplier = 2; }
+                    if (bet.value === 'black' && !isRed && winNum !== 0 && winNum !== '00') { won = true; multiplier = 2; }
+                } else if (bet.type === 'parity') {
+                    if (bet.value === 'even' && isEven) { won = true; multiplier = 2; }
+                    if (bet.value === 'odd' && !isEven && winNum !== 0 && winNum !== '00') { won = true; multiplier = 2; }
+                } else if (bet.type === 'dozen') {
+                    if (bet.value === '1st' && winNum >= 1 && winNum <= 12) { won = true; multiplier = 3; }
+                    if (bet.value === '2nd' && winNum >= 13 && winNum <= 24) { won = true; multiplier = 3; }
+                    if (bet.value === '3rd' && winNum >= 25 && winNum <= 36) { won = true; multiplier = 3; }
+                } else if (bet.type === 'half') {
+                    if (bet.value === 'low' && winNum >= 1 && winNum <= 18) { won = true; multiplier = 2; }
+                    if (bet.value === 'high' && winNum >= 19 && winNum <= 36) { won = true; multiplier = 2; }
+                }
+
+                if (won) {
+                    const winAmount = bet.amount * multiplier;
+                    totalWin += winAmount;
+                    bet.el.classList.add('winner-flash');
+                } else {
+                    bet.el.style.opacity = '0';
+                    setTimeout(() => bet.el.remove(), 1000);
+                }
+            });
+
+            state.balance += totalWin;
+            state.history.unshift({ num: winNum, win: totalWin, bet: state.bets.reduce((a,b)=>a+b.amount, 0) });
+            if (state.history.length > 50) state.history.pop();
+            
+            state.bets = [];
+            updateUI();
+        }
+
+        // --- UI HELPERS ---
+        function updateUI() {
+            document.getElementById('balance-display').textContent = `$${state.balance.toLocaleString()}`;
+        }
+
+        function updateAnalytics() {
+            const histEl = document.getElementById('bet-history');
+            histEl.innerHTML = state.history.map(h => `
+                <div class="flex justify-between items-center text-[11px] p-2 bg-white/5 rounded">
+                    <span class="font-bold ${RED_NUMS.includes(h.num) ? 'text-red-400' : (h.num === 0 || h.num === '00') ? 'text-green-400' : 'text-white'}">${h.num}</span>
+                    <span class="text-white/40">BET: $${h.bet}</span>
+                    <span class="${h.win > 0 ? 'text-green-400' : 'text-white/20'}">${h.win > 0 ? '+$' + h.win : 'LOSS'}</span>
+                </div>
+            `).join('');
+
+            const counts = {};
+            state.history.forEach(h => counts[h.num] = (counts[h.num] || 0) + 1);
+            const sorted = Object.keys(counts).sort((a,b) => counts[b] - counts[a]);
+            
+            document.getElementById('hot-numbers').innerHTML = sorted.slice(0, 5).map(n => `
+                <div class="w-8 h-8 rounded-full ${RED_NUMS.includes(parseInt(n)) ? 'bg-red-900/50' : (n == '0' || n == '00') ? 'bg-green-900/50' : 'bg-white/10'} flex items-center justify-center text-xs border border-white/10">${n}</div>
+            `).join('');
+        }
+
+        function selectChip(val, el) {
+            state.selectedChip = val;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function setMode(mode) {
+            if (state.isSpinning) return;
+            state.mode = mode;
+            document.getElementById('btn-euro').classList.toggle('active', mode === 'european');
+            document.getElementById('btn-amer').classList.toggle('active', mode === 'american');
+            clearBets();
+            renderTable();
+            drawWheel();
+        }
+
+        function clearBets() {
+            state.bets.forEach(b => b.el.remove());
+            state.bets = [];
+            updateUI();
+        }
+
+        function undoBet() {
+            const bet = state.bets.pop();
+            if (bet) {
+                state.balance += bet.amount;
+                bet.el.remove();
+                updateUI();
+            }
+        }
+
+        function toggleAuto() {
+            state.isAuto = !state.isAuto;
+            const btn = document.getElementById('auto-btn');
+            btn.classList.toggle('bg-[var(--gold)]', state.isAuto);
+            btn.classList.toggle('text-black', state.isAuto);
+            if (state.isAuto && !state.isSpinning) spin();
+        }
+
+        window.onload = () => {
+            // Give fonts a moment to load so canvas text renders correctly
+            setTimeout(init, 100);
+        };
+    </script>
+</body>
+</html>
