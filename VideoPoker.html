@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Video Poker Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --casino-green: #0a3d2e;
+            --casino-gold: #d4af37;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1a4d3e 0%, #051d16 100%);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+        }
+
+        .card {
+            aspect-ratio: 2.5/3.5;
+            perspective: 1000px;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%);
+            border: 4px solid white;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 10px 10px;
+        }
+
+        .card-front {
+            background: white;
+            color: black;
+            transform: rotateY(180deg);
+        }
+
+        .card.held {
+            transform: translateY(-20px);
+        }
+
+        .card.held .hold-badge {
+            display: block;
+        }
+
+        .hold-badge {
+            display: none;
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--casino-gold);
+            color: black;
+            font-weight: 800;
+            padding: 2px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px var(--casino-gold);
+        }
+
+        .suit-red { color: #e11d48; }
+        .suit-black { color: #18181b; }
+
+        .btn-primary {
+            background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+            color: black;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 #8b6508;
+        }
+
+        .btn-primary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #8b6508;
+        }
+
+        .btn-primary:disabled {
+            filter: grayscale(1);
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .paytable-row.active {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--casino-gold);
+            font-weight: bold;
+            border-left: 4px solid var(--casino-gold);
+        }
+
+        .payout-column {
+            width: 60px;
+            text-align: center;
+        }
+
+        .payout-column.current-bet {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: bold;
+        }
+
+        @keyframes winPulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(212, 175, 55, 0); }
+            50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(212, 175, 55, 0.5); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(212, 175, 55, 0); }
+        }
+
+        .winning-hand {
+            animation: winPulse 1s infinite;
+        }
+
+        /* Responsive Mobile Styles */
+        @media (max-width: 640px) {
+            .card-area {
+                gap: 8px !important;
+            }
+            .card-front, .card-back {
+                padding: 4px;
+            }
+            .paytable-container {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <header class="p-4 flex justify-between items-center glass-panel m-2">
+        <div class="flex items-center gap-4">
+            <select id="variantSelect" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-sm outline-none focus:border-gold">
+                <option value="jacks_or_better">Jacks or Better</option>
+                <option value="deuces_wild">Deuces Wild</option>
+                <option value="double_double">Double Double Bonus</option>
+            </select>
+            <h1 class="font-black text-xl italic tracking-tighter hidden md:block">VP<span class="text-yellow-500">PRO</span></h1>
+        </div>
+        
+        <div class="flex gap-8 items-center">
+            <div class="text-center">
+                <div class="text-[10px] text-zinc-400 uppercase font-bold">Balance</div>
+                <div id="balanceDisplay" class="text-xl font-mono font-bold">$1,000.00</div>
+            </div>
+            <div class="text-center">
+                <div class="text-[10px] text-zinc-400 uppercase font-bold">Win</div>
+                <div id="winDisplay" class="text-xl font-mono font-bold text-yellow-400">$0.00</div>
+            </div>
+        </div>
+
+        <button onclick="toggleRtp()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded transition">RTP %</button>
+    </header>
+
+    <!-- Paytable (Desktop) -->
+    <div class="flex-1 overflow-hidden flex flex-col items-center justify-center p-2">
+        <div id="paytable" class="w-full max-w-4xl glass-panel mb-8 overflow-hidden transition-all duration-500">
+            <!-- Dynamic Paytable Content -->
+        </div>
+
+        <!-- Card Area -->
+        <div id="cardArea" class="flex gap-4 justify-center w-full max-w-5xl mb-12">
+            <!-- Cards generated by JS -->
+        </div>
+
+        <!-- Result Message -->
+        <div id="resultMessage" class="h-8 text-2xl font-black text-yellow-400 mb-4 opacity-0 transition-opacity uppercase italic tracking-widest">
+            Royal Flush!
+        </div>
+
+        <!-- Controls -->
+        <div class="w-full max-w-2xl glass-panel p-6 flex flex-wrap gap-6 items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col">
+                    <span class="text-[10px] uppercase font-bold text-zinc-400">Bet</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeBet(-1)" class="w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-white/20">-</button>
+                        <span id="betDisplay" class="text-2xl font-mono font-bold w-6 text-center">1</span>
+                        <button onclick="changeBet(1)" class="w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-white/20">+</button>
+                    </div>
+                </div>
+                <button onclick="maxBet()" class="px-4 py-2 text-xs font-bold bg-zinc-800 rounded hover:bg-zinc-700 transition">MAX BET</button>
+            </div>
+
+            <button id="actionBtn" onclick="handleAction()" class="btn-primary flex-1 max-w-[240px] py-4 rounded-xl text-xl shadow-lg">
+                Deal
+            </button>
+
+            <div id="strategyTip" class="hidden md:block text-xs text-zinc-400 italic max-w-[150px]">
+                Tip: Hold the pair of Jacks to maximize expected value.
+            </div>
+        </div>
+    </div>
+
+    <!-- RTP Modal -->
+    <div id="rtpModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+        <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-md w-full">
+            <h2 class="text-2xl font-black mb-4">RTP Transparency</h2>
+            <div class="space-y-4">
+                <div class="flex justify-between border-b border-zinc-800 pb-2">
+                    <span>Jacks or Better</span>
+                    <span class="text-yellow-400">99.54%</span>
+                </div>
+                <div class="flex justify-between border-b border-zinc-800 pb-2">
+                    <span>Deuces Wild</span>
+                    <span class="text-yellow-400">99.73%</span>
+                </div>
+                <div class="flex justify-between border-b border-zinc-800 pb-2">
+                    <span>Double Double Bonus</span>
+                    <span class="text-yellow-400">100.07%</span>
+                </div>
+            </div>
+            <p class="mt-6 text-xs text-zinc-500">
+                These percentages represent the theoretical return to player based on optimal strategy over millions of hands.
+            </p>
+            <button onclick="toggleRtp()" class="mt-8 w-full py-3 bg-zinc-800 rounded font-bold">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Configuration & Constants ---
+        const VARIANTS = {
+            jacks_or_better: {
+                name: "Jacks or Better",
+                minQualifyingHand: "Jacks or Better",
+                wilds: [],
+                paytable: [
+                    { label: "Royal Flush", multi: 250, special: 800 }, // Special is for max bet
+                    { label: "Straight Flush", multi: 50 },
+                    { label: "Four of a Kind", multi: 25 },
+                    { label: "Full House", multi: 9 },
+                    { label: "Flush", multi: 6 },
+                    { label: "Straight", multi: 4 },
+                    { label: "Three of a Kind", multi: 3 },
+                    { label: "Two Pair", multi: 2 },
+                    { label: "Jacks or Better", multi: 1 }
+                ]
+            },
+            deuces_wild: {
+                name: "Deuces Wild",
+                minQualifyingHand: "Three of a Kind",
+                wilds: ["2"],
+                paytable: [
+                    { label: "Natural Royal Flush", multi: 250, special: 800 },
+                    { label: "Four Deuces", multi: 200 },
+                    { label: "Wild Royal Flush", multi: 25 },
+                    { label: "Five of a Kind", multi: 15 },
+                    { label: "Straight Flush", multi: 9 },
+                    { label: "Four of a Kind", multi: 5 },
+                    { label: "Full House", multi: 3 },
+                    { label: "Flush", multi: 2 },
+                    { label: "Straight", multi: 2 },
+                    { label: "Three of a Kind", multi: 1 }
+                ]
+            },
+            double_double: {
+                name: "Double Double Bonus",
+                minQualifyingHand: "Jacks or Better",
+                wilds: [],
+                paytable: [
+                    { label: "Royal Flush", multi: 250, special: 800 },
+                    { label: "Straight Flush", multi: 50 },
+                    { label: "4 Aces w/ 2,3,4", multi: 400 },
+                    { label: "4 Aces", multi: 160 },
+                    { label: "4 2s, 3s, 4s w/ A-4", multi: 160 },
+                    { label: "4 2s, 3s, 4s", multi: 80 },
+                    { label: "4 5s thru Ks", multi: 50 },
+                    { label: "Full House", multi: 9 },
+                    { label: "Flush", multi: 6 },
+                    { label: "Straight", multi: 4 },
+                    { label: "Three of a Kind", multi: 3 },
+                    { label: "Two Pair", multi: 1 },
+                    { label: "Jacks or Better", multi: 1 }
+                ]
+            }
+        };
+
+        const SUITS = [
+            { symbol: '♠', name: 'spades', color: 'suit-black' },
+            { symbol: '♣', name: 'clubs', color: 'suit-black' },
+            { symbol: '♥', name: 'hearts', color: 'suit-red' },
+            { symbol: '♦', name: 'diamonds', color: 'suit-red' }
+        ];
+
+        const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        // --- State Management ---
+        let state = {
+            balance: 1000,
+            bet: 1,
+            maxBetVal: 5,
+            currentVariant: 'jacks_or_better',
+            gameState: 'IDLE', // IDLE, HOLD_SELECTION, DEALING, DRAWING
+            deck: [],
+            hand: [],
+            held: [false, false, false, false, false],
+            lastWin: 0
+        };
+
+        // --- Core Engine ---
+
+        function init() {
+            renderPaytable();
+            renderCards();
+            updateUI();
+            
+            document.getElementById('variantSelect').addEventListener('change', (e) => {
+                if(state.gameState === 'IDLE') {
+                    state.currentVariant = e.target.value;
+                    renderPaytable();
+                    resetTable();
+                } else {
+                    e.target.value = state.currentVariant;
+                }
+            });
+        }
+
+        function createDeck() {
+            const deck = [];
+            for (const suit of SUITS) {
+                for (const rank of RANKS) {
+                    deck.push({ rank, suit });
+                }
+            }
+            return shuffle(deck);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- Game Flow ---
+
+        function handleAction() {
+            if (state.gameState === 'IDLE') {
+                deal();
+            } else if (state.gameState === 'HOLD_SELECTION') {
+                draw();
+            }
+        }
+
+        async function deal() {
+            if (state.balance < state.bet) return;
+            
+            // Deduct bet
+            state.balance -= state.bet;
+            state.lastWin = 0;
+            state.gameState = 'DEALING';
+            state.held = [false, false, false, false, false];
+            state.deck = createDeck();
+            
+            updateUI();
+
+            // Deal 5 cards
+            state.hand = state.deck.splice(0, 5);
+            
+            for (let i = 0; i < 5; i++) {
+                const cardEl = document.getElementById(`card-${i}`);
+                updateCardFront(i, state.hand[i]);
+                await sleep(100);
+                cardEl.classList.add('flipped');
+            }
+
+            state.gameState = 'HOLD_SELECTION';
+            updateUI();
+        }
+
+        async function draw() {
+            state.gameState = 'DRAWING';
+            updateUI();
+
+            for (let i = 0; i < 5; i++) {
+                if (!state.held[i]) {
+                    const cardEl = document.getElementById(`card-${i}`);
+                    cardEl.classList.remove('flipped');
+                    await sleep(200);
+                    
+                    state.hand[i] = state.deck.splice(0, 1)[0];
+                    updateCardFront(i, state.hand[i]);
+                    
+                    await sleep(100);
+                    cardEl.classList.add('flipped');
+                }
+            }
+
+            evaluateResult();
+        }
+
+        function evaluateResult() {
+            const result = evaluateHand(state.hand, state.currentVariant);
+            const variant = VARIANTS[state.currentVariant];
+            
+            let payout = 0;
+            if (result) {
+                const payEntry = variant.paytable.find(p => p.label === result);
+                if (payEntry) {
+                    const multi = (state.bet === state.maxBetVal && payEntry.special) ? payEntry.special : payEntry.multi;
+                    payout = multi * state.bet;
+                }
+            }
+
+            state.balance += payout;
+            state.lastWin = payout;
+            state.gameState = 'IDLE';
+
+            displayResult(result, payout);
+            updateUI();
+            highlightPaytable(result);
+        }
+
+        // --- Logic Engine (The Brain) ---
+
+        function evaluateHand(hand, variantId) {
+            const variant = VARIANTS[variantId];
+            const isWild = (rank) => variant.wilds.includes(rank);
+            
+            // Standardize cards for calculation
+            const cards = hand.map(c => ({
+                rank: c.rank,
+                suit: c.suit.name,
+                value: RANKS.indexOf(c.rank) + 2,
+                isWild: isWild(c.rank)
+            }));
+
+            const wildCount = cards.filter(c => c.isWild).length;
+            const nonWilds = cards.filter(c => !c.isWild);
+
+            // Grouping logic
+            const rankCounts = {};
+            cards.forEach(c => rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1);
+            
+            const suitCounts = {};
+            cards.forEach(c => suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1);
+
+            // 1. Natural Royal Flush
+            const isFlush = Object.keys(suitCounts).length === 1;
+            const values = cards.map(c => c.value).sort((a,b) => a-b);
+            const isStraight = values.every((v, i) => i === 0 || v === values[i-1] + 1) || (values.join(',') === '2,3,4,5,14');
+            
+            if (isFlush && isStraight && values[4] === 14 && values[0] === 10 && wildCount === 0) return "Royal Flush" || "Natural Royal Flush";
+
+            // 2. Deuces Wild Special: Four Deuces
+            if (variantId === 'deuces_wild' && wildCount === 4) return "Four Deuces";
+
+            // 3. Five of a Kind
+            const maxGroup = Math.max(...Object.values(rankCounts)) || 0;
+            // Check groups with wilds
+            const nonWildGroups = {};
+            nonWilds.forEach(c => nonWildGroups[c.rank] = (nonWildGroups[c.rank] || 0) + 1);
+            const maxNonWildGroup = Math.max(0, ...Object.values(nonWildGroups));
+            if (maxNonWildGroup + wildCount >= 5) {
+                if (variantId === 'deuces_wild') return "Five of a Kind";
+            }
+
+            // 4. Wild Royal Flush
+            if (isFlushWithWilds(cards) && isStraightWithWilds(cards) && getHighStraightValue(cards) === 14) {
+                if (wildCount > 0) return "Wild Royal Flush";
+            }
+
+            // 5. Four of a Kind (Bonus logic for Double Double)
+            if (maxNonWildGroup + wildCount >= 4) {
+                if (variantId === 'double_double') {
+                    const quadRank = Object.keys(nonWildGroups).find(r => nonWildGroups[r] + wildCount >= 4);
+                    const kicker = nonWilds.find(c => c.rank !== quadRank)?.rank;
+                    if (quadRank === 'A') {
+                        return (['2','3','4'].includes(kicker)) ? "4 Aces w/ 2,3,4" : "4 Aces";
+                    }
+                    if (['2','3','4'].includes(quadRank)) {
+                        return (['A','2','3','4'].includes(kicker)) ? "4 2s, 3s, 4s w/ A-4" : "4 2s, 3s, 4s";
+                    }
+                    return "4 5s thru Ks";
+                }
+                return "Four of a Kind";
+            }
+
+            // 6. Full House
+            if (isFullHouse(nonWildGroups, wildCount)) return "Full House";
+
+            // 7. Flush
+            if (isFlushWithWilds(cards)) return "Flush";
+
+            // 8. Straight
+            if (isStraightWithWilds(cards)) return "Straight";
+
+            // 9. Three of a Kind
+            if (maxNonWildGroup + wildCount >= 3) return "Three of a Kind";
+
+            // 10. Two Pair (No wild logic usually results in better hands anyway)
+            const pairs = Object.values(nonWildGroups).filter(v => v === 2).length;
+            if (pairs === 2 || (pairs === 1 && wildCount >= 1)) return "Two Pair";
+
+            // 11. Jacks or Better
+            if (variantId !== 'deuces_wild') {
+                const joB = ['J', 'Q', 'K', 'A'];
+                for (let r of joB) {
+                    if (nonWildGroups[r] >= 2 || (nonWildGroups[r] === 1 && wildCount >= 1)) return "Jacks or Better";
+                }
+            }
+
+            return null;
+        }
+
+        function isFlushWithWilds(cards) {
+            const suits = {};
+            cards.forEach(c => { if(!c.isWild) suits[c.suit] = (suits[c.suit] || 0) + 1 });
+            return Object.keys(suits).length <= 1;
+        }
+
+        function isStraightWithWilds(cards) {
+            const nonWildValues = [...new Set(cards.filter(c => !c.isWild).map(c => c.value))].sort((a,b) => a-b);
+            const wildCount = cards.filter(c => c.isWild).length;
+            if (nonWildValues.length + wildCount < 5) return false;
+            
+            // Typical 5 card window check
+            for (let start = 2; start <= 10; start++) {
+                let needed = 0;
+                for (let v = start; v < start + 5; v++) {
+                    if (!nonWildValues.includes(v)) needed++;
+                }
+                if (needed <= wildCount) return true;
+            }
+            // Ace low check
+            let aceLowNeeded = 0;
+            [14, 2, 3, 4, 5].forEach(v => { if(!nonWildValues.includes(v)) aceLowNeeded++ });
+            if (aceLowNeeded <= wildCount) return true;
+
+            return false;
+        }
+
+        function getHighStraightValue(cards) {
+            // Simplified for Royal check
+            const nonWildValues = cards.filter(c => !c.isWild).map(c => c.value);
+            const wildCount = cards.filter(c => c.isWild).length;
+            let needed = 0;
+            [10,11,12,13,14].forEach(v => { if(!nonWildValues.includes(v)) needed++ });
+            return (needed <= wildCount) ? 14 : 0;
+        }
+
+        function isFullHouse(nonWildGroups, wildCount) {
+            const counts = Object.values(nonWildGroups).sort((a,b) => b-a);
+            // 3 + 2
+            if (counts[0] >= 3 && counts[1] >= 2) return true;
+            // 3 + 1 + wild
+            if (counts[0] >= 3 && counts[1] >= 1 && wildCount >= 1) return true;
+            // 2 + 2 + wild
+            if (counts[0] >= 2 && counts[1] >= 2 && wildCount >= 1) return true;
+            // 2 + 1 + 2 wilds (This would be 4 of a kind actually, but eval runs top down)
+            return false; 
+        }
+
+        // --- UI Rendering ---
+
+        function renderPaytable() {
+            const variant = VARIANTS[state.currentVariant];
+            let html = `
+                <div class="grid grid-cols-6 text-[10px] md:text-sm">
+                    <div class="col-span-1 p-2 bg-black/20 font-bold uppercase text-zinc-400">Hand</div>
+                    <div class="payout-column p-2">1</div>
+                    <div class="payout-column p-2">2</div>
+                    <div class="payout-column p-2">3</div>
+                    <div class="payout-column p-2">4</div>
+                    <div class="payout-column p-2 bg-yellow-900/20 text-yellow-500 font-bold">5</div>
+                </div>
+            `;
+
+            variant.paytable.forEach(row => {
+                html += `
+                    <div id="pay-row-${row.label.replace(/\s+/g, '-').toLowerCase()}" class="paytable-row grid grid-cols-6 border-t border-white/5">
+                        <div class="col-span-1 p-2">${row.label}</div>
+                        ${[1,2,3,4,5].map(b => {
+                            const val = (b === 5 && row.special) ? row.special * 1 : row.multi * b;
+                            return `<div class="payout-column p-2 ${state.bet === b ? 'current-bet' : ''}">${val}</div>`;
+                        }).join('')}
+                    </div>
+                `;
+            });
+            document.getElementById('paytable').innerHTML = html;
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cardArea');
+            container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                container.innerHTML += `
+                    <div id="card-${i}" class="card w-full" onclick="toggleHold(${i})">
+                        <div class="hold-badge">Held</div>
+                        <div class="card-inner">
+                            <div class="card-back"></div>
+                            <div class="card-front" id="card-front-${i}">
+                                <!-- Card content -->
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateCardFront(index, card) {
+            const el = document.getElementById(`card-front-${index}`);
+            const suitObj = card.suit;
+            el.className = `card-front ${suitObj.color}`;
+            el.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <span class="text-2xl font-bold leading-none">${card.rank}<br><small class="text-lg">${suitObj.symbol}</small></span>
+                </div>
+                <div class="text-5xl self-center">${suitObj.symbol}</div>
+                <div class="flex justify-between items-end rotate-180">
+                    <span class="text-2xl font-bold leading-none">${card.rank}<br><small class="text-lg">${suitObj.symbol}</small></span>
+                </div>
+            `;
+        }
+
+        function updateUI() {
+            document.getElementById('balanceDisplay').innerText = `$${state.balance.toLocaleString()}`;
+            document.getElementById('winDisplay').innerText = `$${state.lastWin.toLocaleString()}`;
+            document.getElementById('betDisplay').innerText = state.bet;
+            
+            const btn = document.getElementById('actionBtn');
+            if (state.gameState === 'IDLE') {
+                btn.innerText = 'Deal';
+                btn.disabled = state.balance < state.bet;
+            } else if (state.gameState === 'HOLD_SELECTION') {
+                btn.innerText = 'Draw';
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+
+            renderPaytable();
+        }
+
+        function toggleHold(index) {
+            if (state.gameState !== 'HOLD_SELECTION') return;
+            state.held[index] = !state.held[index];
+            const cardEl = document.getElementById(`card-${index}`);
+            if (state.held[index]) cardEl.classList.add('held');
+            else cardEl.classList.remove('held');
+            
+            // Sound feedback could go here
+        }
+
+        function changeBet(delta) {
+            if (state.gameState !== 'IDLE') return;
+            state.bet = Math.min(state.maxBetVal, Math.max(1, state.bet + delta));
+            updateUI();
+        }
+
+        function maxBet() {
+            if (state.gameState !== 'IDLE') return;
+            state.bet = state.maxBetVal;
+            updateUI();
+            deal(); // Auto deal on max bet is common in VP
+        }
+
+        function displayResult(text, payout) {
+            const msgEl = document.getElementById('resultMessage');
+            if (payout > 0) {
+                msgEl.innerText = `${text}! Win $${payout}`;
+                msgEl.style.opacity = '1';
+                setTimeout(() => msgEl.style.opacity = '0', 3000);
+            }
+        }
+
+        function highlightPaytable(handLabel) {
+            // Remove previous highlights
+            document.querySelectorAll('.paytable-row').forEach(r => r.classList.remove('active', 'winning-hand'));
+            
+            if (handLabel) {
+                const id = `pay-row-${handLabel.replace(/\s+/g, '-').toLowerCase()}`;
+                const row = document.getElementById(id);
+                if (row) {
+                    row.classList.add('active', 'winning-hand');
+                }
+            }
+        }
+
+        function resetTable() {
+            state.gameState = 'IDLE';
+            state.hand = [];
+            state.held = [false, false, false, false, false];
+            renderCards();
+            updateUI();
+        }
+
+        function toggleRtp() {
+            const modal = document.getElementById('rtpModal');
+            modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // Start the game
+        window.onload = init;
+
+    </script>
+</body>
+</html>
