@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craps.html | Casino-Grade Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --felt-green: #0a4d2e;
+            --felt-border: #063620;
+            --gold: #d4af37;
+            --chip-1: #ffffff;
+            --chip-5: #ff4d4d;
+            --chip-25: #4d79ff;
+            --chip-100: #333333;
+            --chip-500: #a34dff;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #111;
+            color: white;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Table Layout Styling */
+        .casino-table {
+            background: radial-gradient(circle at center, var(--felt-green) 0%, var(--felt-border) 100%);
+            border: 12px solid #3d2b1f;
+            border-radius: 100px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            min-height: 500px;
+            padding: 40px;
+        }
+
+        .bet-area {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: center;
+            position: relative;
+        }
+
+        .bet-area:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--gold);
+        }
+
+        .bet-active {
+            background: rgba(212, 175, 55, 0.15) !important;
+            border-color: var(--gold) !important;
+        }
+
+        /* Dice Styles */
+        .dice-container {
+            perspective: 1000px;
+            width: 60px;
+            height: 60px;
+        }
+
+        .die {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+        }
+
+        .die-face {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #e74c3c;
+            border: 1px solid #c0392b;
+            border-radius: 8px;
+            display: grid;
+            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+            padding: 5px;
+            box-sizing: border-box;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .pip {
+            background: white;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            align-self: center;
+            justify-self: center;
+        }
+
+        /* Dice Rotations */
+        .die-1 { transform: rotateX(0deg) rotateY(0deg); }
+        .die-2 { transform: rotateX(-90deg) rotateY(0deg); }
+        .die-3 { transform: rotateX(0deg) rotateY(-90deg); }
+        .die-4 { transform: rotateX(0deg) rotateY(90deg); }
+        .die-5 { transform: rotateX(90deg) rotateY(0deg); }
+        .die-6 { transform: rotateX(180deg) rotateY(0deg); }
+
+        .front  { transform: rotateY(0deg) translateZ(30px); }
+        .back   { transform: rotateY(180deg) translateZ(30px); }
+        .right  { transform: rotateY(90deg) translateZ(30px); }
+        .left   { transform: rotateY(-90deg) translateZ(30px); }
+        .top    { transform: rotateX(90deg) translateZ(30px); }
+        .bottom { transform: rotateX(-90deg) translateZ(30px); }
+
+        /* Chips */
+        .chip {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 4px dashed rgba(255,255,255,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        .chip:active { transform: translateY(2px); }
+        .chip-selected { transform: scale(1.2) translateY(-5px); border-color: white; box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
+
+        .stacked-chip {
+            position: absolute;
+            pointer-events: none;
+            width: 30px;
+            height: 30px;
+            font-size: 8px;
+        }
+
+        .log-container::-webkit-scrollbar { width: 4px; }
+        .log-container::-webkit-scrollbar-thumb { background: #444; }
+
+        @keyframes roll-shake {
+            0% { transform: translate(0, 0) rotate(0); }
+            20% { transform: translate(-10px, 10px) rotate(5deg); }
+            40% { transform: translate(10px, -10px) rotate(-5deg); }
+            100% { transform: translate(0, 0) rotate(0); }
+        }
+        .rolling { animation: roll-shake 0.2s infinite; }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center">
+
+    <!-- Header Stats -->
+    <div class="w-full max-w-6xl flex justify-between items-center mb-6 bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+        <div class="flex flex-col">
+            <span class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Bankroll</span>
+            <span id="bankroll-display" class="text-2xl font-black text-emerald-400">$5,000</span>
+        </div>
+        <div class="flex flex-col items-center">
+            <span class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Table Phase</span>
+            <span id="phase-display" class="text-xl font-bold text-white italic">COME OUT</span>
+        </div>
+        <div class="flex flex-col items-end">
+            <span class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Active Point</span>
+            <span id="point-display" class="text-2xl font-black text-amber-400">OFF</span>
+        </div>
+    </div>
+
+    <!-- Main Table Felt -->
+    <div class="casino-table w-full max-w-6xl grid grid-cols-12 gap-2 relative">
+        
+        <!-- Numbers Box (Top Row) -->
+        <div class="col-span-12 grid grid-cols-6 gap-2 mb-4">
+            <div onclick="placeBet('place4')" data-bet="place4" class="bet-area h-24 rounded-lg flex-col">
+                <span class="text-xs opacity-50">Place</span>
+                <span class="text-3xl">4</span>
+            </div>
+            <div onclick="placeBet('place5')" data-bet="place5" class="bet-area h-24 rounded-lg flex-col">
+                <span class="text-xs opacity-50">Place</span>
+                <span class="text-3xl">5</span>
+            </div>
+            <div onclick="placeBet('place6')" data-bet="place6" class="bet-area h-24 rounded-lg flex-col">
+                <span class="text-xs opacity-50">Place</span>
+                <span class="text-3xl">SIX</span>
+            </div>
+            <div onclick="placeBet('place8')" data-bet="place8" class="bet-area h-24 rounded-lg flex-col">
+                <span class="text-xs opacity-50">Place</span>
+                <span class="text-3xl">8</span>
+            </div>
+            <div onclick="placeBet('place9')" data-bet="place9" class="bet-area h-24 rounded-lg flex-col">
+                <span class="text-xs opacity-50">Place</span>
+                <span class="text-3xl">9</span>
+            </div>
+            <div onclick="placeBet('place10')" data-bet="place10" class="bet-area h-24 rounded-lg flex-col">
+                <span class="text-xs opacity-50">Place</span>
+                <span class="text-3xl">10</span>
+            </div>
+        </div>
+
+        <!-- Field & Come -->
+        <div class="col-span-8 flex flex-col gap-2">
+            <div onclick="placeBet('come')" data-bet="come" class="bet-area h-32 rounded-xl text-4xl">COME</div>
+            <div onclick="placeBet('field')" data-bet="field" class="bet-area h-32 rounded-xl flex-col">
+                <span class="text-sm opacity-60">FIELD</span>
+                <span class="text-xl">2  3  4  9  10  11  12</span>
+            </div>
+        </div>
+
+        <!-- Hardways -->
+        <div class="col-span-4 grid grid-cols-2 gap-2">
+            <div onclick="placeBet('hard4')" data-bet="hard4" class="bet-area rounded-lg text-xs flex-col">
+                <span>Hard 4</span>
+                <div class="flex gap-1 mt-1"><div class="w-2 h-2 bg-white rounded-sm"></div><div class="w-2 h-2 bg-white rounded-sm"></div></div>
+            </div>
+            <div onclick="placeBet('hard6')" data-bet="hard6" class="bet-area rounded-lg text-xs flex-col">
+                <span>Hard 6</span>
+                <div class="flex gap-1 mt-1"><div class="w-2 h-2 bg-white rounded-sm"></div><div class="w-2 h-2 bg-white rounded-sm"></div></div>
+            </div>
+            <div onclick="placeBet('hard8')" data-bet="hard8" class="bet-area rounded-lg text-xs flex-col">
+                <span>Hard 8</span>
+                <div class="flex gap-1 mt-1"><div class="w-2 h-2 bg-white rounded-sm"></div><div class="w-2 h-2 bg-white rounded-sm"></div></div>
+            </div>
+            <div onclick="placeBet('hard10')" data-bet="hard10" class="bet-area rounded-lg text-xs flex-col">
+                <span>Hard 10</span>
+                <div class="flex gap-1 mt-1"><div class="w-2 h-2 bg-white rounded-sm"></div><div class="w-2 h-2 bg-white rounded-sm"></div></div>
+            </div>
+        </div>
+
+        <!-- Pass Line / Don't Pass -->
+        <div class="col-span-12 mt-4 grid grid-cols-1 gap-2">
+            <div onclick="placeBet('passLine')" data-bet="passLine" class="bet-area h-16 rounded-full border-4 border-white/40 text-2xl tracking-widest">PASS LINE</div>
+            <div onclick="placeBet('dontPass')" data-bet="dontPass" class="bet-area h-12 rounded-full border-2 border-white/20 text-sm opacity-70">DON'T PASS BAR 12</div>
+        </div>
+
+        <!-- Dice Animation Layer -->
+        <div id="dice-scene" class="absolute inset-0 pointer-events-none flex items-center justify-center gap-12 opacity-0 transition-opacity duration-300">
+            <div class="dice-container">
+                <div id="die1" class="die die-1">
+                    <div class="die-face front"><div class="pip" style="grid-area: 2/2"></div></div>
+                    <div class="die-face back"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 1/3"></div><div class="pip" style="grid-area: 2/2"></div><div class="pip" style="grid-area: 3/1"></div><div class="pip" style="grid-area: 3/3"></div><div class="pip" style="grid-area: 2/1"></div></div>
+                    <div class="die-face right"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 3/3"></div><div class="pip" style="grid-area: 2/2"></div></div>
+                    <div class="die-face left"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 1/3"></div><div class="pip" style="grid-area: 3/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                    <div class="die-face top"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 1/3"></div><div class="pip" style="grid-area: 2/2"></div><div class="pip" style="grid-area: 3/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                    <div class="die-face bottom"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                </div>
+            </div>
+            <div class="dice-container">
+                <div id="die2" class="die die-1">
+                    <div class="die-face front"><div class="pip" style="grid-area: 2/2"></div></div>
+                    <div class="die-face back"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 1/3"></div><div class="pip" style="grid-area: 2/1"></div><div class="pip" style="grid-area: 2/3"></div><div class="pip" style="grid-area: 3/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                    <div class="die-face right"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 3/3"></div><div class="pip" style="grid-area: 2/2"></div></div>
+                    <div class="die-face left"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 1/3"></div><div class="pip" style="grid-area: 3/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                    <div class="die-face top"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 1/3"></div><div class="pip" style="grid-area: 2/2"></div><div class="pip" style="grid-area: 3/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                    <div class="die-face bottom"><div class="pip" style="grid-area: 1/1"></div><div class="pip" style="grid-area: 3/3"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full max-w-6xl mt-8 grid grid-cols-12 gap-6">
+        <!-- Chip Selector -->
+        <div class="col-span-12 md:col-span-4 bg-zinc-900 p-4 rounded-xl border border-zinc-800 flex justify-between items-center">
+            <div onclick="selectChip(1)" class="chip chip-selected" style="background: var(--chip-1); color: black;">1</div>
+            <div onclick="selectChip(5)" class="chip" style="background: var(--chip-5);">5</div>
+            <div onclick="selectChip(25)" class="chip" style="background: var(--chip-25);">25</div>
+            <div onclick="selectChip(100)" class="chip" style="background: var(--chip-100);">100</div>
+            <div onclick="selectChip(500)" class="chip" style="background: var(--chip-500);">500</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-span-12 md:col-span-4 flex gap-4">
+            <button onclick="clearBets()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-xl transition uppercase tracking-widest text-sm">Clear</button>
+            <button id="roll-btn" onclick="rollDice()" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-xl transition shadow-lg shadow-emerald-900/20 uppercase tracking-widest text-xl">Roll Dice</button>
+        </div>
+
+        <!-- Log -->
+        <div class="col-span-12 md:col-span-4 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col h-40">
+            <div class="p-2 border-b border-zinc-800 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Game History</div>
+            <div id="game-log" class="log-container p-3 flex-1 overflow-y-auto text-xs font-mono space-y-1">
+                <div class="text-zinc-400">Welcome to Craps.html. Place your Come-Out bets.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        let state = {
+            bankroll: 5000,
+            point: null,
+            phase: 'COME_OUT', // COME_OUT, POINT
+            selectedChip: 1,
+            activeBets: {},
+            history: []
+        };
+
+        const BET_TYPES = {
+            passLine: { name: 'Pass Line', type: 'contract' },
+            dontPass: { name: "Don't Pass", type: 'contract' },
+            field: { name: 'Field', type: 'one-roll' },
+            come: { name: 'Come', type: 'contract' },
+            hard4: { name: 'Hard 4', type: 'prop' },
+            hard6: { name: 'Hard 6', type: 'prop' },
+            hard8: { name: 'Hard 8', type: 'prop' },
+            hard10: { name: 'Hard 10', type: 'prop' },
+            place4: { name: 'Place 4', type: 'place' },
+            place5: { name: 'Place 5', type: 'place' },
+            place6: { name: 'Place 6', type: 'place' },
+            place8: { name: 'Place 8', type: 'place' },
+            place9: { name: 'Place 9', type: 'place' },
+            place10: { name: 'Place 10', type: 'place' }
+        };
+
+        // --- CORE LOGIC ---
+
+        function selectChip(val) {
+            state.selectedChip = val;
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.remove('chip-selected');
+                if (parseInt(c.innerText) === val) c.classList.add('chip-selected');
+            });
+        }
+
+        function placeBet(type) {
+            if (state.bankroll < state.selectedChip) {
+                log("Not enough funds!", "text-red-400");
+                return;
+            }
+
+            // Validation: Cant place Pass Line once point is set
+            if (state.phase === 'POINT' && (type === 'passLine' || type === 'dontPass')) {
+                log("Point already set. Use Odds or Come bets.", "text-amber-400");
+                return;
+            }
+
+            state.bankroll -= state.selectedChip;
+            state.activeBets[type] = (state.activeBets[type] || 0) + state.selectedChip;
+            
+            updateUI();
+            log(`Placed $${state.selectedChip} on ${BET_TYPES[type].name}`);
+        }
+
+        function clearBets() {
+            Object.keys(state.activeBets).forEach(key => {
+                state.bankroll += state.activeBets[key];
+            });
+            state.activeBets = {};
+            updateUI();
+            log("Bets cleared.");
+        }
+
+        async function rollDice() {
+            if (Object.keys(state.activeBets).length === 0) {
+                log("Place a bet first!", "text-amber-400");
+                return;
+            }
+
+            const btn = document.getElementById('roll-btn');
+            btn.disabled = true;
+            
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            const total = d1 + d2;
+
+            // Animate
+            const scene = document.getElementById('dice-scene');
+            scene.style.opacity = '1';
+            
+            animateDie('die1', d1);
+            animateDie('die2', d2);
+
+            await new Promise(r => setTimeout(r, 1800));
+            
+            processResult(d1, d2, total);
+            
+            await new Promise(r => setTimeout(r, 1000));
+            scene.style.opacity = '0';
+            btn.disabled = false;
+        }
+
+        function animateDie(id, result) {
+            const el = document.getElementById(id);
+            // Random many rotations
+            const x = (Math.floor(Math.random() * 4) + 5) * 360;
+            const y = (Math.floor(Math.random() * 4) + 5) * 360;
+            
+            // Map result to rotation
+            const faceRots = {
+                1: { rx: 0, ry: 0 },
+                2: { rx: 90, ry: 0 },
+                3: { rx: 0, ry: 90 },
+                4: { rx: 0, ry: -90 },
+                5: { rx: -90, ry: 0 },
+                6: { rx: 180, ry: 0 }
+            };
+            
+            const rot = faceRots[result];
+            el.style.transform = `rotateX(${x + rot.rx}deg) rotateY(${y + rot.ry}deg)`;
+        }
+
+        function processResult(d1, d2, total) {
+            log(`Rolled ${total} (${d1}, ${d2})`, "text-white font-bold text-lg");
+            
+            let winnings = 0;
+            const isHard = (d1 === d2);
+            
+            // --- FIELD ---
+            if (state.activeBets.field) {
+                if ([2, 12].includes(total)) {
+                    winnings += state.activeBets.field * 3; // 2:1 payout + original
+                    log(`Field WIN (2x)! +$${state.activeBets.field * 2}`, "text-emerald-400");
+                } else if ([3, 4, 9, 10, 11].includes(total)) {
+                    winnings += state.activeBets.field * 2;
+                    log(`Field WIN! +$${state.activeBets.field}`, "text-emerald-400");
+                } else {
+                    log(`Field LOSS -$${state.activeBets.field}`, "text-red-400");
+                }
+                delete state.activeBets.field;
+            }
+
+            // --- HARDWAYS ---
+            const hCheck = (num, betKey) => {
+                if (state.activeBets[betKey]) {
+                    if (total === num && isHard) {
+                        const mult = (num === 6 || num === 8) ? 10 : 8; // 9:1 or 7:1
+                        winnings += state.activeBets[betKey] * mult;
+                        log(`${BET_TYPES[betKey].name} HIT! +$${state.activeBets[betKey] * (mult-1)}`, "text-emerald-400");
+                        delete state.activeBets[betKey];
+                    } else if (total === 7 || (total === num && !isHard)) {
+                        log(`${BET_TYPES[betKey].name} LOSS`, "text-red-400");
+                        delete state.activeBets[betKey];
+                    }
+                }
+            };
+            hCheck(4, 'hard4'); hCheck(6, 'hard6'); hCheck(8, 'hard8'); hCheck(10, 'hard10');
+
+            // --- MAIN GAME ENGINE ---
+            if (state.phase === 'COME_OUT') {
+                if (total === 7 || total === 11) {
+                    if (state.activeBets.passLine) {
+                        winnings += state.activeBets.passLine * 2;
+                        log(`Pass Line WIN! +$${state.activeBets.passLine}`, "text-emerald-400");
+                        delete state.activeBets.passLine;
+                    }
+                    if (state.activeBets.dontPass) {
+                        log(`Don't Pass LOSS`, "text-red-400");
+                        delete state.activeBets.dontPass;
+                    }
+                } else if (total === 2 || total === 3 || total === 12) {
+                    if (state.activeBets.passLine) {
+                        log(`Craps! Pass Line LOSS`, "text-red-400");
+                        delete state.activeBets.passLine;
+                    }
+                    if (state.activeBets.dontPass) {
+                        if (total === 12) {
+                            winnings += state.activeBets.dontPass; // PUSH
+                            log("12 - Don't Pass PUSHES", "text-zinc-400");
+                        } else {
+                            winnings += state.activeBets.dontPass * 2;
+                            log(`Don't Pass WIN! +$${state.activeBets.dontPass}`, "text-emerald-400");
+                        }
+                        delete state.activeBets.dontPass;
+                    }
+                } else {
+                    state.point = total;
+                    state.phase = 'POINT';
+                    log(`Point is set to ${total}`, "text-amber-400 underline");
+                }
+            } else {
+                // POINT PHASE
+                if (total === state.point) {
+                    // WINNER
+                    if (state.activeBets.passLine) {
+                        winnings += state.activeBets.passLine * 2;
+                        log(`Point Hit! Pass Line WIN!`, "text-emerald-400");
+                        delete state.activeBets.passLine;
+                    }
+                    if (state.activeBets.dontPass) {
+                        log(`Point Hit! Don't Pass LOSS`, "text-red-400");
+                        delete state.activeBets.dontPass;
+                    }
+                    state.point = null;
+                    state.phase = 'COME_OUT';
+                } else if (total === 7) {
+                    // SEVEN OUT
+                    log("Seven Out! House clears table.", "text-red-500 font-bold");
+                    if (state.activeBets.dontPass) {
+                        winnings += state.activeBets.dontPass * 2;
+                        log(`Don't Pass WIN!`, "text-emerald-400");
+                    }
+                    state.activeBets = {};
+                    state.point = null;
+                    state.phase = 'COME_OUT';
+                }
+                
+                // Place bets logic
+                const placeKey = 'place' + total;
+                if (state.activeBets[placeKey]) {
+                    const odds = (total === 4 || total === 10) ? 1.8 : (total === 5 || total === 9) ? 1.4 : 1.16;
+                    const gain = Math.floor(state.activeBets[placeKey] * odds);
+                    winnings += state.activeBets[placeKey] + gain;
+                    log(`Place ${total} WIN! +$${gain}`, "text-emerald-400");
+                    delete state.activeBets[placeKey];
+                }
+            }
+
+            state.bankroll += winnings;
+            updateUI();
+        }
+
+        // --- UI UPDATES ---
+
+        function updateUI() {
+            document.getElementById('bankroll-display').innerText = `$${state.bankroll.toLocaleString()}`;
+            document.getElementById('phase-display').innerText = state.phase.replace('_', ' ');
+            document.getElementById('point-display').innerText = state.point || 'OFF';
+            
+            // Visual highlight for bets
+            document.querySelectorAll('.bet-area').forEach(el => {
+                const betType = el.getAttribute('data-bet');
+                el.classList.remove('bet-active');
+                
+                // Clear existing chips
+                const oldChips = el.querySelectorAll('.stacked-chip');
+                oldChips.forEach(c => c.remove());
+
+                if (state.activeBets[betType]) {
+                    el.classList.add('bet-active');
+                    // Add visual chip representation
+                    const chipCount = Math.min(5, Math.ceil(state.activeBets[betType] / 25));
+                    for(let i=0; i<chipCount; i++) {
+                        const chip = document.createElement('div');
+                        chip.className = 'chip stacked-chip';
+                        chip.style.bottom = `${5 + (i * 3)}px`;
+                        chip.style.left = '50%';
+                        chip.style.transform = 'translateX(-50%)';
+                        chip.style.background = state.activeBets[betType] > 99 ? 'var(--chip-100)' : 'var(--chip-25)';
+                        if (i === chipCount - 1) chip.innerText = `$${state.activeBets[betType]}`;
+                        el.appendChild(chip);
+                    }
+                }
+            });
+        }
+
+        function log(msg, colorClass = "text-zinc-300") {
+            const logContainer = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.className = colorClass;
+            entry.innerText = `> ${msg}`;
+            logContainer.prepend(entry);
+        }
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>

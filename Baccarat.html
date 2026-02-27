@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High Roller Baccarat - Private Salon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --dark-gold: #996515;
+            --felt: #1a3a34;
+            --marble: #0a0a0a;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        h1, h2, .serif {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .luxury-panel {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .gold-border { border: 1px solid var(--gold); }
+        .gold-text { color: var(--gold); }
+        .gold-bg { background-color: var(--gold); }
+
+        .table-area {
+            background: radial-gradient(ellipse at center, #1a473d 0%, #0d2621 100%);
+            border-radius: 50% 50% 10px 10px / 15% 15% 10px 10px;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .card {
+            width: 70px;
+            height: 100px;
+            background: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: black;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            position: relative;
+        }
+
+        .card.hidden { transform: translateY(-50px) scale(0); opacity: 0; }
+        
+        .chip {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 4px dashed rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .chip:hover { transform: scale(1.1); box-shadow: 0 0 15px var(--gold); }
+        .chip.active { transform: scale(1.2); border-color: white; box-shadow: 0 0 20px white; }
+
+        .roadmap-grid {
+            display: grid;
+            grid-auto-flow: column;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 2px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px;
+            overflow-x: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .roadmap-cell {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+        }
+
+        .bet-zone {
+            transition: background 0.3s, transform 0.2s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .bet-zone:hover { background: rgba(255,255,255,0.05); }
+        .bet-zone.highlight { transform: scale(1.02); border-color: var(--gold); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
+
+        .bead-P { background: #1e40af; } /* Blue */
+        .bead-B { background: #b91c1c; } /* Red */
+        .bead-T { background: #15803d; } /* Green */
+
+        @keyframes shimmer {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        .winning-glow { animation: shimmer 1s infinite; box-shadow: 0 0 30px var(--gold); border-color: var(--gold); }
+    </style>
+</head>
+<body class="p-4 flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="flex justify-between items-center mb-4 luxury-panel p-4 rounded-xl">
+        <div class="flex items-center space-x-8">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">Total Balance</p>
+                <p class="text-xl gold-text font-bold" id="balance-display">$100,000</p>
+            </div>
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">Commission Pool</p>
+                <p class="text-xl text-white font-bold" id="commission-display">$0</p>
+            </div>
+        </div>
+        
+        <h1 class="text-2xl tracking-tighter uppercase gold-text serif italic">Private Salon <span class="text-white not-italic">Baccarat</span></h1>
+
+        <div class="flex items-center space-x-4">
+            <button onclick="toggleAutoplayModal()" class="px-4 py-1 border border-gold text-gold text-sm rounded hover:bg-gold hover:text-black transition">Autoplay</button>
+            <div class="text-right">
+                <p class="text-[10px] text-gray-400 uppercase">Table Limit</p>
+                <p class="text-xs">$100 - $10,000</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-12 gap-4 h-[calc(100vh-160px)]">
+        
+        <!-- Left Panel: Roadmaps -->
+        <aside class="col-span-3 flex flex-col space-y-4">
+            <div class="luxury-panel p-3 rounded-xl flex-1 flex flex-col">
+                <h3 class="text-[10px] uppercase tracking-widest mb-2 gold-text">Bead Plate</h3>
+                <div id="bead-road" class="roadmap-grid flex-1"></div>
+            </div>
+            <div class="luxury-panel p-3 rounded-xl flex-1 flex flex-col">
+                <h3 class="text-[10px] uppercase tracking-widest mb-2 gold-text">Big Road</h3>
+                <div id="big-road" class="roadmap-grid flex-1"></div>
+            </div>
+        </aside>
+
+        <!-- Center: Game Table -->
+        <section class="col-span-6 flex flex-col relative">
+            <div class="table-area flex-1 flex flex-col items-center justify-center relative overflow-hidden">
+                
+                <!-- Banker Cards -->
+                <div class="absolute top-1/4 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                    <p class="text-[10px] uppercase tracking-widest text-red-400 mb-2">Banker</p>
+                    <div id="banker-hand" class="flex space-x-2"></div>
+                    <p id="banker-score" class="mt-2 text-xl font-bold"></p>
+                </div>
+
+                <!-- Player Cards -->
+                <div class="absolute bottom-1/4 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                    <p id="player-score" class="mb-2 text-xl font-bold"></p>
+                    <div id="player-hand" class="flex space-x-2"></div>
+                    <p class="text-[10px] uppercase tracking-widest text-blue-400 mt-2">Player</p>
+                </div>
+
+                <!-- Betting Zones -->
+                <div class="absolute inset-0 grid grid-cols-3 grid-rows-2 p-12 gap-8 pointer-events-none">
+                    <div id="zone-panda" onclick="placeBet('panda')" class="bet-zone pointer-events-auto rounded-full flex items-center justify-center flex-col border border-dashed border-gray-600 bg-black/20">
+                        <span class="text-[10px] text-purple-400">PANDA 8</span>
+                        <span class="text-xs gold-text">25:1</span>
+                        <span id="bet-panda" class="text-sm font-bold mt-1">$0</span>
+                    </div>
+                    
+                    <div id="zone-tie" onclick="placeBet('tie')" class="bet-zone pointer-events-auto flex items-center justify-center flex-col border-b border-gray-600 bg-black/10">
+                        <span class="text-xs text-green-500 font-bold">TIE</span>
+                        <span class="text-[10px] gold-text">8:1</span>
+                        <span id="bet-tie" class="text-sm font-bold mt-1">$0</span>
+                    </div>
+
+                    <div id="zone-dragon" onclick="placeBet('dragon')" class="bet-zone pointer-events-auto rounded-full flex items-center justify-center flex-col border border-dashed border-gray-600 bg-black/20">
+                        <span class="text-[10px] text-orange-400">DRAGON</span>
+                        <span class="text-xs gold-text">UP TO 30:1</span>
+                        <span id="bet-dragon" class="text-sm font-bold mt-1">$0</span>
+                    </div>
+
+                    <div id="zone-player" onclick="placeBet('player')" class="bet-zone pointer-events-auto col-span-1 rounded-l-full flex items-center justify-center flex-col border-r border-gray-600 bg-blue-900/10">
+                        <span class="text-lg text-blue-400 font-black">PLAYER</span>
+                        <span class="text-[10px] gold-text">1:1</span>
+                        <span id="bet-player" class="text-sm font-bold mt-1">$0</span>
+                    </div>
+
+                    <div class="flex items-center justify-center p-4">
+                        <div id="shoe-indicator" class="w-12 h-16 border-2 border-gold/30 rounded flex items-center justify-center opacity-50">
+                            <span class="text-[8px] text-center gold-text uppercase">Virtual Shoe</span>
+                        </div>
+                    </div>
+
+                    <div id="zone-banker" onclick="placeBet('banker')" class="bet-zone pointer-events-auto col-span-1 rounded-r-full flex items-center justify-center flex-col border-l border-gray-600 bg-red-900/10">
+                        <span class="text-lg text-red-400 font-black">BANKER</span>
+                        <span class="text-[10px] gold-text">1:1 (-5%)</span>
+                        <span id="bet-banker" class="text-sm font-bold mt-1">$0</span>
+                    </div>
+                </div>
+
+                <!-- Message Box -->
+                <div id="game-message" class="absolute top-1/2 -translate-y-1/2 bg-black/80 px-8 py-3 rounded-full border border-gold opacity-0 transition-opacity pointer-events-none">
+                    <p id="message-text" class="text-xl gold-text font-bold uppercase tracking-widest"></p>
+                </div>
+            </div>
+
+            <!-- Betting Controls -->
+            <div class="luxury-panel p-4 rounded-xl mt-4 flex items-center justify-between">
+                <div class="flex space-x-2">
+                    <div onclick="selectChip(100)" class="chip gold-bg text-black" data-value="100">100</div>
+                    <div onclick="selectChip(500)" class="chip bg-blue-700 text-white" data-value="500">500</div>
+                    <div onclick="selectChip(1000)" class="chip bg-purple-700 text-white" data-value="1000">1k</div>
+                    <div onclick="selectChip(5000)" class="chip bg-black text-gold gold-border" data-value="5000">5k</div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button onclick="clearBets()" class="text-[10px] uppercase text-gray-400 hover:text-white">Clear</button>
+                    <button onclick="handleDeal()" id="deal-btn" class="bg-gold hover:bg-yellow-600 text-black px-10 py-3 rounded-lg font-bold uppercase tracking-widest transition-all">Deal</button>
+                    <button onclick="repeatLastBet()" class="text-[10px] uppercase text-gray-400 hover:text-white">Repeat</button>
+                </div>
+
+                <div class="text-right">
+                    <p class="text-[10px] uppercase text-gray-400">Total Bet</p>
+                    <p id="total-bet-display" class="text-xl font-bold">$0</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Intelligence -->
+        <aside class="col-span-3 flex flex-col space-y-4">
+            <div class="luxury-panel p-4 rounded-xl flex-1">
+                <h3 class="text-[10px] uppercase tracking-widest mb-4 gold-text">Trend Intelligence</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span>PLAYER</span>
+                            <span id="stat-player-pct">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                            <div id="bar-player" class="bg-blue-600 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span>BANKER</span>
+                            <span id="stat-banker-pct">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                            <div id="bar-banker" class="bg-red-600 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-white/5">
+                        <div class="grid grid-cols-2 gap-2 text-center">
+                            <div class="p-2 bg-black/20 rounded">
+                                <p class="text-[8px] text-gray-400 uppercase">Current Streak</p>
+                                <p id="current-streak" class="text-lg font-bold">---</p>
+                            </div>
+                            <div class="p-2 bg-black/20 rounded">
+                                <p class="text-[8px] text-gray-400 uppercase">Longest</p>
+                                <p id="longest-streak" class="text-lg font-bold">---</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <p class="text-[8px] text-gray-400 uppercase mb-2">Momentum (Last 20)</p>
+                        <div id="momentum-graph" class="h-16 flex items-end space-x-1">
+                            <!-- Graph Bars injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="luxury-panel p-4 rounded-xl">
+                <h3 class="text-[10px] uppercase tracking-widest mb-2 gold-text">Side Bet Stats</h3>
+                <div class="flex justify-between items-center text-xs">
+                    <span>Dragon Bonus</span>
+                    <span id="stat-dragon-hit" class="text-orange-400">0</span>
+                </div>
+                <div class="flex justify-between items-center text-xs mt-1">
+                    <span>Panda 8</span>
+                    <span id="stat-panda-hit" class="text-purple-400">0</span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Autoplay Modal -->
+    <div id="autoplay-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="luxury-panel p-8 rounded-2xl w-96 border-gold border-2 shadow-2xl">
+            <h2 class="text-xl gold-text mb-4 serif italic">Autoplay Intelligence</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] uppercase text-gray-400 block mb-1">Strategy</label>
+                    <select id="auto-strategy" class="w-full bg-black border border-white/20 p-2 text-sm rounded">
+                        <option value="flat">Flat Betting</option>
+                        <option value="martingale">Martingale (x2 on Loss)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase text-gray-400 block mb-1">Rounds</label>
+                    <input type="number" id="auto-rounds" value="10" class="w-full bg-black border border-white/20 p-2 text-sm rounded">
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase text-gray-400 block mb-1">Bet On</label>
+                    <select id="auto-target" class="w-full bg-black border border-white/20 p-2 text-sm rounded">
+                        <option value="player">Player</option>
+                        <option value="banker">Banker</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex space-x-2 mt-8">
+                <button onclick="toggleAutoplayModal()" class="flex-1 py-2 text-sm border border-white/20 rounded">Cancel</button>
+                <button onclick="startAutoplay()" class="flex-1 py-2 text-sm bg-gold text-black rounded font-bold">Start</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        const state = {
+            balance: 100000,
+            commissionPool: 0,
+            currentBets: { player: 0, banker: 0, tie: 0, dragon: 0, panda: 0 },
+            lastBets: null,
+            selectedChip: 500,
+            history: [],
+            shoe: [],
+            isDealing: false,
+            autoplay: { active: false, rounds: 0, strategy: 'flat', target: 'player', baseBet: 0 },
+            stats: { player: 0, banker: 0, tie: 0, dragon: 0, panda: 0 },
+            streaks: { current: null, count: 0, max: 0 }
+        };
+
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+        // --- CORE LOGIC ---
+        function initShoe() {
+            state.shoe = [];
+            for (let i = 0; i < 8; i++) { // 8 decks
+                for (let suit of SUITS) {
+                    for (let val of VALUES) {
+                        state.shoe.push({ val, suit });
+                    }
+                }
+            }
+            shuffle(state.shoe);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function drawCard() {
+            if (state.shoe.length < 10) initShoe();
+            return state.shoe.pop();
+        }
+
+        function getCardValue(card) {
+            if (['10', 'J', 'Q', 'K'].includes(card.val)) return 0;
+            if (card.val === 'A') return 1;
+            return parseInt(card.val);
+        }
+
+        function calculateHand(hand) {
+            const sum = hand.reduce((acc, card) => acc + getCardValue(card), 0);
+            return sum % 10;
+        }
+
+        function selectChip(val) {
+            state.selectedChip = val;
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.toggle('active', parseInt(c.dataset.value) === val);
+            });
+        }
+
+        function placeBet(zone) {
+            if (state.isDealing || state.autoplay.active) return;
+            if (state.balance < state.selectedChip) return;
+
+            state.currentBets[zone] += state.selectedChip;
+            state.balance -= state.selectedChip;
+            updateUI();
+        }
+
+        function clearBets() {
+            if (state.isDealing) return;
+            Object.keys(state.currentBets).forEach(key => {
+                state.balance += state.currentBets[key];
+                state.currentBets[key] = 0;
+            });
+            updateUI();
+        }
+
+        function repeatLastBet() {
+            if (state.isDealing || !state.lastBets) return;
+            const totalLast = Object.values(state.lastBets).reduce((a, b) => a + b, 0);
+            if (state.balance < totalLast) return;
+
+            Object.keys(state.lastBets).forEach(key => {
+                state.currentBets[key] = state.lastBets[key];
+                state.balance -= state.currentBets[key];
+            });
+            updateUI();
+        }
+
+        async function handleDeal() {
+            const totalBet = Object.values(state.currentBets).reduce((a, b) => a + b, 0);
+            if (totalBet === 0 || state.isDealing) return;
+
+            state.isDealing = true;
+            state.lastBets = { ...state.currentBets };
+            document.getElementById('deal-btn').disabled = true;
+            
+            // Initial Draw
+            let pHand = [drawCard(), drawCard()];
+            let bHand = [drawCard(), drawCard()];
+            
+            await renderDeal(pHand, bHand);
+        }
+
+        async function renderDeal(pHand, bHand) {
+            const pDiv = document.getElementById('player-hand');
+            const bDiv = document.getElementById('banker-hand');
+            pDiv.innerHTML = '';
+            bDiv.innerHTML = '';
+            document.getElementById('player-score').innerText = '';
+            document.getElementById('banker-score').innerText = '';
+
+            // Card 1 Player
+            await animateCard(pHand[0], pDiv);
+            updateScores(pHand, [bHand[0]]);
+
+            // Card 1 Banker
+            await animateCard(bHand[0], bDiv);
+            updateScores(pHand, [bHand[0]]);
+
+            // Card 2 Player
+            await animateCard(pHand[1], pDiv);
+            updateScores(pHand.slice(0, 2), bHand.slice(0, 1));
+
+            // Card 2 Banker
+            await animateCard(bHand[1], bDiv);
+            let pScore = calculateHand(pHand);
+            let bScore = calculateHand(bHand);
+            updateScores(pHand, bHand);
+
+            // Third Card Logic
+            let pThird = null;
+            
+            // Naturals
+            if (pScore < 8 && bScore < 8) {
+                // Player draw
+                if (pScore <= 5) {
+                    pThird = drawCard();
+                    pHand.push(pThird);
+                    await animateCard(pThird, pDiv);
+                    pScore = calculateHand(pHand);
+                    updateScores(pHand, bHand);
+                }
+
+                // Banker draw
+                if (shouldBankerDraw(bScore, pThird ? getCardValue(pThird) : null)) {
+                    const bThird = drawCard();
+                    bHand.push(bThird);
+                    await animateCard(bThird, bDiv);
+                    bScore = calculateHand(bHand);
+                    updateScores(pHand, bHand);
+                }
+            }
+
+            determineWinner(pScore, bScore, pHand, bHand);
+        }
+
+        function shouldBankerDraw(bScore, pThirdValue) {
+            if (pThirdValue === null) return bScore <= 5;
+            
+            if (bScore <= 2) return true;
+            if (bScore === 3) return pThirdValue !== 8;
+            if (bScore === 4) return [2, 3, 4, 5, 6, 7].includes(pThirdValue);
+            if (bScore === 5) return [4, 5, 6, 7].includes(pThirdValue);
+            if (bScore === 6) return [6, 7].includes(pThirdValue);
+            return false;
+        }
+
+        async function animateCard(card, target) {
+            return new Promise(resolve => {
+                const el = document.createElement('div');
+                el.className = 'card hidden';
+                el.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <span class="${['♥','♦'].includes(card.suit) ? 'text-red-600' : ''}">${card.val}</span>
+                        <span class="${['♥','♦'].includes(card.suit) ? 'text-red-600' : ''} text-sm">${card.suit}</span>
+                    </div>
+                `;
+                target.appendChild(el);
+                setTimeout(() => {
+                    el.classList.remove('hidden');
+                    resolve();
+                }, 400);
+            });
+        }
+
+        function updateScores(p, b) {
+            document.getElementById('player-score').innerText = calculateHand(p);
+            document.getElementById('banker-score').innerText = calculateHand(b);
+        }
+
+        function determineWinner(pScore, bScore, pHand, bHand) {
+            let result = '';
+            if (pScore > bScore) result = 'P';
+            else if (bScore > pScore) result = 'B';
+            else result = 'T';
+
+            state.history.push({ result, pScore, bScore, pHand, bHand });
+            
+            // Side Bet Logic
+            let dragonBonus = 0;
+            if (result === 'B') {
+                const diff = bScore - pScore;
+                const natural = bHand.length === 2 && (bScore === 8 || bScore === 9);
+                if (natural) dragonBonus = 1; // Payout 1:1 for natural win
+                else if (diff >= 4) {
+                    if (diff === 4) dragonBonus = 4;
+                    if (diff === 5) dragonBonus = 6;
+                    if (diff === 6) dragonBonus = 10;
+                    if (diff === 7) dragonBonus = 20;
+                    if (diff >= 8) dragonBonus = 30;
+                }
+            }
+
+            let pandaBonus = (result === 'P' && pHand.length === 3 && pScore === 8) ? 25 : 0;
+
+            // Update Stats
+            if (result === 'P') state.stats.player++;
+            else if (result === 'B') state.stats.banker++;
+            else state.stats.tie++;
+
+            if (dragonBonus >= 4) state.stats.dragon++;
+            if (pandaBonus > 0) state.stats.panda++;
+
+            // Handle Payouts
+            let winAmount = 0;
+            if (result === 'P') winAmount += state.currentBets.player * 2;
+            if (result === 'B') {
+                const net = state.currentBets.banker * 0.95;
+                state.commissionPool += state.currentBets.banker * 0.05;
+                winAmount += state.currentBets.banker + net;
+            }
+            if (result === 'T') winAmount += state.currentBets.tie * 9;
+            
+            if (dragonBonus > 0) winAmount += state.currentBets.dragon * (dragonBonus + 1);
+            if (pandaBonus > 0) winAmount += state.currentBets.panda * (pandaBonus + 1);
+
+            state.balance += winAmount;
+
+            // Update Streak
+            if (state.streaks.current === result) {
+                state.streaks.count++;
+            } else {
+                state.streaks.current = result;
+                state.streaks.count = 1;
+            }
+            state.streaks.max = Math.max(state.streaks.max, state.streaks.count);
+
+            showWinnerMessage(result);
+            updateRoadmaps();
+            updateUI();
+
+            setTimeout(() => {
+                state.currentBets = { player: 0, banker: 0, tie: 0, dragon: 0, panda: 0 };
+                state.isDealing = false;
+                document.getElementById('deal-btn').disabled = false;
+                updateUI();
+                
+                if (state.autoplay.active) {
+                    processAutoplay(result === state.autoplay.target, winAmount > 0);
+                }
+            }, 2000);
+        }
+
+        function showWinnerMessage(res) {
+            const msg = document.getElementById('game-message');
+            const text = document.getElementById('message-text');
+            const map = { 'P': 'Player Wins', 'B': 'Banker Wins', 'T': 'Tie' };
+            
+            text.innerText = map[res];
+            msg.style.opacity = '1';
+            
+            // Highlight zones
+            document.querySelectorAll('.bet-zone').forEach(z => z.classList.remove('winning-glow'));
+            if (res === 'P') document.getElementById('zone-player').classList.add('winning-glow');
+            if (res === 'B') document.getElementById('zone-banker').classList.add('winning-glow');
+            if (res === 'T') document.getElementById('zone-tie').classList.add('winning-glow');
+
+            setTimeout(() => {
+                msg.style.opacity = '0';
+                document.querySelectorAll('.bet-zone').forEach(z => z.classList.remove('winning-glow'));
+            }, 2000);
+        }
+
+        // --- UI & ROADMAPS ---
+        function updateUI() {
+            document.getElementById('balance-display').innerText = `$${state.balance.toLocaleString()}`;
+            document.getElementById('commission-display').innerText = `$${state.commissionPool.toLocaleString()}`;
+            
+            let total = 0;
+            Object.keys(state.currentBets).forEach(key => {
+                document.getElementById(`bet-${key}`).innerText = `$${state.currentBets[key].toLocaleString()}`;
+                total += state.currentBets[key];
+            });
+            document.getElementById('total-bet-display').innerText = `$${total.toLocaleString()}`;
+
+            // Stats
+            const totalHands = state.history.length || 1;
+            const pPct = Math.round((state.stats.player / totalHands) * 100);
+            const bPct = Math.round((state.stats.banker / totalHands) * 100);
+
+            document.getElementById('stat-player-pct').innerText = `${pPct}%`;
+            document.getElementById('stat-banker-pct').innerText = `${bPct}%`;
+            document.getElementById('bar-player').style.width = `${pPct}%`;
+            document.getElementById('bar-banker').style.width = `${bPct}%`;
+            
+            document.getElementById('current-streak').innerText = `${state.streaks.current || '--'} x${state.streaks.count}`;
+            document.getElementById('longest-streak').innerText = `${state.streaks.max}`;
+            document.getElementById('stat-dragon-hit').innerText = state.stats.dragon;
+            document.getElementById('stat-panda-hit').innerText = state.stats.panda;
+
+            // Momentum Graph
+            const graph = document.getElementById('momentum-graph');
+            graph.innerHTML = '';
+            state.history.slice(-20).forEach(h => {
+                const bar = document.createElement('div');
+                bar.className = `w-2 rounded-t transition-all ${h.result === 'P' ? 'bg-blue-600' : h.result === 'B' ? 'bg-red-600' : 'bg-green-600'}`;
+                bar.style.height = `${(Math.max(h.pScore, h.bScore) + 1) * 10}%`;
+                graph.appendChild(bar);
+            });
+        }
+
+        function updateRoadmaps() {
+            const bead = document.getElementById('bead-road');
+            bead.innerHTML = '';
+            state.history.forEach(h => {
+                const cell = document.createElement('div');
+                cell.className = `roadmap-cell bead-${h.result}`;
+                cell.innerText = h.result;
+                bead.appendChild(cell);
+            });
+
+            // Big Road
+            const big = document.getElementById('big-road');
+            big.innerHTML = '';
+            let columns = [];
+            let currentColumn = [];
+            let lastResult = null;
+
+            state.history.forEach(h => {
+                if (h.result === 'T') {
+                    // Tie just adds a mark to last item usually, simplified here as separate for visual
+                    // In real big road, Tie is a green slash on the last P or B
+                } else {
+                    if (h.result !== lastResult) {
+                        if (currentColumn.length > 0) columns.push(currentColumn);
+                        currentColumn = [h.result];
+                    } else {
+                        currentColumn.push(h.result);
+                    }
+                    lastResult = h.result;
+                }
+            });
+            if (currentColumn.length > 0) columns.push(currentColumn);
+
+            columns.forEach(col => {
+                col.forEach(res => {
+                    const cell = document.createElement('div');
+                    cell.className = `roadmap-cell border-2 ${res === 'P' ? 'border-blue-600' : 'border-red-600'}`;
+                    big.appendChild(cell);
+                });
+                // Pad to 6 rows
+                for (let i = col.length; i < 6; i++) {
+                    const empty = document.createElement('div');
+                    empty.className = 'w-3.5 h-3.5';
+                    big.appendChild(empty);
+                }
+            });
+        }
+
+        // --- AUTOPLAY ---
+        function toggleAutoplayModal() {
+            const modal = document.getElementById('autoplay-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function startAutoplay() {
+            state.autoplay.active = true;
+            state.autoplay.rounds = parseInt(document.getElementById('auto-rounds').value);
+            state.autoplay.strategy = document.getElementById('auto-strategy').value;
+            state.autoplay.target = document.getElementById('auto-target').value;
+            
+            const totalBet = Object.values(state.currentBets).reduce((a, b) => a + b, 0);
+            state.autoplay.baseBet = totalBet || 500;
+            
+            toggleAutoplayModal();
+            runAutoplayRound();
+        }
+
+        async function runAutoplayRound() {
+            if (!state.autoplay.active || state.autoplay.rounds <= 0) {
+                stopAutoplay();
+                return;
+            }
+
+            // Place bet
+            state.currentBets[state.autoplay.target] = state.autoplay.baseBet;
+            state.balance -= state.autoplay.baseBet;
+            updateUI();
+
+            await handleDeal();
+        }
+
+        function processAutoplay(won, totalProfit) {
+            state.autoplay.rounds--;
+            
+            if (state.autoplay.strategy === 'martingale') {
+                if (!won) state.autoplay.baseBet *= 2;
+                else state.autoplay.baseBet = state.lastBets[state.autoplay.target];
+            }
+
+            if (state.balance < state.autoplay.baseBet) {
+                stopAutoplay();
+                return;
+            }
+
+            setTimeout(() => runAutoplayRound(), 1000);
+        }
+
+        function stopAutoplay() {
+            state.autoplay.active = false;
+            updateUI();
+        }
+
+        // Initialize
+        window.onload = () => {
+            initShoe();
+            selectChip(500);
+            updateUI();
+        };
+
+    </script>
+</body>
+</html>
