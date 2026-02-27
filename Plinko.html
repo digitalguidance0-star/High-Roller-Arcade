@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURELIA V2 | Sovereign Plinko Engine</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <style>
+        :root {
+            --bg-ultra: #050507;
+            --gold-primary: #d4af37;
+            --gold-bright: #fcf6ba;
+            --neon-cyan: #00f3ff;
+            --neon-danger: #ff004c;
+            --glass: rgba(15, 15, 20, 0.7);
+        }
+
+        body {
+            background-color: var(--bg-ultra);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 10%, #1a1a2e 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, #0a0a0f 0%, transparent 30%);
+        }
+
+        .cinzel { font-family: 'Cinzel', serif; }
+        .gold-gradient {
+            background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Advanced UI Layers */
+        .panel-glass {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+
+        #game-stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 800px;
+            height: 850px;
+            background: radial-gradient(circle at 50% 50%, #0f0f1a 0%, #050507 100%);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 2px solid rgba(212, 175, 55, 0.1);
+            transition: transform 0.1s ease-out; /* For Camera Shake/Tilt */
+        }
+
+        /* XP Bar */
+        .xp-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.05);
+        }
+        #xp-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, var(--neon-cyan), var(--gold-primary));
+            transition: width 0.5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        /* Tension Flash */
+        .tension-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: radial-gradient(circle, transparent 40%, rgba(212, 175, 55, 0.1) 100%);
+        }
+
+        /* Bot AI Mood Indicator */
+        .ai-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-calm { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+        .status-tense { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
+        .status-hype { background: var(--neon-danger); box-shadow: 0 0 8px var(--neon-danger); }
+
+        /* Multiplier Slots Animation */
+        .slot-pill {
+            flex: 1;
+            margin: 0 2px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            border-radius: 6px 6px 12px 12px;
+            color: white;
+            transition: all 0.2s;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            border-top: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .active-hit {
+            transform: translateY(-10px) scale(1.05);
+            filter: brightness(1.5);
+            box-shadow: 0 -10px 20px rgba(255,255,255,0.2);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 10px; }
+
+        @keyframes pulse-gold {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        .pulsing { animation: pulse-gold 2s infinite; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation: Session & Progression -->
+    <nav class="h-16 flex items-center justify-between px-8 border-b border-white/5 panel-glass z-50">
+        <div class="flex items-center gap-8">
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-[0.3em] text-gray-500 font-bold">Protocol</span>
+                <span class="cinzel text-xl gold-gradient font-black tracking-tighter">AURELIA V.2</span>
+            </div>
+            
+            <div class="h-8 w-px bg-white/10"></div>
+
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-widest text-gray-500">Session Level</span>
+                <div class="flex items-center gap-3">
+                    <span id="level-display" class="text-white font-bold">LVL 01</span>
+                    <div class="w-32 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div id="xp-bar-inner" class="h-full bg-cyan-400" style="width: 20%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-12">
+            <div class="text-right">
+                <span class="text-[10px] uppercase tracking-widest text-gray-500">Sovereign Balance</span>
+                <div class="text-2xl cinzel font-bold text-white tracking-widest">$<span id="balance-val">1,000.00</span></div>
+            </div>
+            <button onclick="prestigeReset()" class="group relative px-6 py-2 overflow-hidden rounded bg-white/5 border border-white/10 hover:border-yellow-500/50 transition-all">
+                <span class="relative z-10 text-[10px] uppercase tracking-widest text-gray-400 group-hover:text-yellow-500 transition-colors">Prestige Request</span>
+                <div class="absolute inset-0 bg-yellow-500/5 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-1 flex overflow-hidden p-6 gap-6">
+        
+        <!-- Left: Intelligence & History -->
+        <aside class="w-72 flex flex-col gap-6">
+            <div class="panel-glass rounded-2xl p-5 flex-1 flex flex-col overflow-hidden">
+                <div class="flex justify-between items-center mb-4 pb-4 border-b border-white/5">
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">Drop Intelligence</h3>
+                    <div class="flex items-center">
+                        <span id="ai-mood-dot" class="ai-status status-calm"></span>
+                        <span id="ai-mood-text" class="text-[9px] uppercase text-cyan-400 font-bold">Optimal</span>
+                    </div>
+                </div>
+                
+                <div id="history-list" class="flex-1 overflow-y-auto space-y-2 pr-2">
+                    <!-- History injected here -->
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-white/5 space-y-2">
+                    <div class="flex justify-between text-[10px] uppercase text-gray-500">
+                        <span>Session Profit</span>
+                        <span id="session-profit" class="text-white">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] uppercase text-gray-500">
+                        <span>Max Streak</span>
+                        <span id="max-streak" class="text-yellow-500">0x</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Physics Theater -->
+        <section id="game-stage" class="flex-1">
+            <div class="xp-container">
+                <div id="xp-progress"></div>
+            </div>
+            
+            <div class="canvas-container" id="physics-container">
+                <div class="tension-overlay" id="tension-fx"></div>
+                
+                <!-- Risk Drop Selectors -->
+                <div class="absolute top-8 left-0 w-full flex justify-center gap-16 z-20">
+                    <button onclick="initiateDrop('left')" class="group flex flex-col items-center gap-2">
+                        <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center group-hover:border-pink-500 group-hover:shadow-[0_0_15px_rgba(236,72,153,0.3)] transition-all">
+                            <span class="text-pink-500 font-black">L</span>
+                        </div>
+                        <span class="text-[9px] uppercase tracking-widest text-gray-500 group-hover:text-pink-400 transition-colors">Vanguard</span>
+                    </button>
+
+                    <button onclick="initiateDrop('center')" class="group flex flex-col items-center gap-2">
+                        <div class="w-14 h-14 rounded-full border border-yellow-500/20 flex items-center justify-center group-hover:border-yellow-500 group-hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all">
+                            <span class="text-yellow-500 font-black">C</span>
+                        </div>
+                        <span class="text-[9px] uppercase tracking-widest text-gray-500 group-hover:text-yellow-400 transition-colors">Sovereign</span>
+                    </button>
+
+                    <button onclick="initiateDrop('right')" class="group flex flex-col items-center gap-2">
+                        <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center group-hover:border-cyan-500 group-hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all">
+                            <span class="text-cyan-500 font-black">R</span>
+                        </div>
+                        <span class="text-[9px] uppercase tracking-widest text-gray-500 group-hover:text-cyan-400 transition-colors">Zenith</span>
+                    </button>
+                </div>
+
+                <canvas id="plinko-canvas"></canvas>
+
+                <!-- Multiplier Bar -->
+                <div id="multiplier-bar" class="absolute bottom-0 left-0 w-full px-2 pb-2 flex pointer-events-none">
+                    <!-- Slots injected via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Right: Control Deck -->
+        <aside class="w-80 flex flex-col gap-6">
+            <div class="panel-glass rounded-2xl p-6 space-y-8">
+                <div>
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-4">Wager Configuration</h3>
+                    <div class="bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-gray-400">Bet Amount</span>
+                            <span class="text-xs text-yellow-500 font-bold">Max $1k</span>
+                        </div>
+                        <input type="number" id="bet-val" value="10.00" class="w-full bg-transparent text-2xl font-bold cinzel text-white focus:outline-none">
+                        <div class="grid grid-cols-4 gap-2 mt-4">
+                            <button onclick="adjBet(0.5)" class="py-2 rounded bg-white/5 hover:bg-white/10 text-[10px] transition-colors">1/2</button>
+                            <button onclick="adjBet(2)" class="py-2 rounded bg-white/5 hover:bg-white/10 text-[10px] transition-colors">x2</button>
+                            <button onclick="adjBet(0)" class="py-2 rounded bg-white/5 hover:bg-white/10 text-[10px] transition-colors">MIN</button>
+                            <button onclick="adjBet(1000)" class="py-2 rounded bg-white/5 hover:bg-white/10 text-[10px] transition-colors">MAX</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="toggleAuto()" id="auto-btn" class="w-full py-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center gap-3 transition-all">
+                        <div id="auto-led" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_red]"></div>
+                        <span class="text-xs uppercase tracking-widest font-bold">Autonomous Drops</span>
+                    </button>
+                    
+                    <div class="bg-yellow-500/5 rounded-xl p-4 border border-yellow-500/10">
+                        <div class="flex justify-between items-center text-[10px] uppercase text-yellow-500/70 mb-2">
+                            <span>Sovereign Multiplier Probability</span>
+                            <span id="prob-val">Low Risk</span>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div id="risk-meter" class="h-full bg-yellow-500 transition-all duration-1000" style="width: 30%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-white/5">
+                    <h3 class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-4">Session Statistics</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span class="text-[10px] uppercase text-gray-500">Total Drops</span>
+                            <span id="stat-drops" class="text-xs font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-[10px] uppercase text-gray-500">Max Multiplier</span>
+                            <span id="stat-max" class="text-xs font-bold text-yellow-500">1.0x</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-[10px] uppercase text-gray-500">House Edge Resistance</span>
+                            <span class="text-xs font-bold text-cyan-400">99.2%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </main>
+
+    <script>
+        // --- CORE STATE ---
+        const STATE = {
+            balance: 1000.00,
+            profit: 0,
+            level: 1,
+            xp: 0,
+            drops: 0,
+            maxMult: 1,
+            streak: 0,
+            isAuto: false,
+            autoTimer: null,
+            activeBalls: 0,
+            seed: Math.random(),
+            risk: 'low'
+        };
+
+        const CONFIG = {
+            multipliers: [110, 41, 10, 5, 2, 0.5, 0.2, 0.2, 0.5, 2, 5, 10, 41, 110],
+            xpPerDrop: 15,
+            levelUpBase: 1000,
+            colors: {
+                jackpot: '#ff004c',
+                high: '#ff8800',
+                mid: '#ffcc00',
+                safe: '#00f3ff',
+                loss: '#4a5568'
+            }
+        };
+
+        // --- PHYSICS ENGINE ---
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+        const engine = Engine.create({ gravity: { y: 1.5 } });
+        const canvas = document.getElementById('plinko-canvas');
+        const container = document.getElementById('physics-container');
+
+        const CW = 800;
+        const CH = 850;
+
+        const render = Render.create({
+            canvas: canvas,
+            engine: engine,
+            options: {
+                width: CW,
+                height: CH,
+                wireframes: false,
+                background: 'transparent',
+                pixelRatio: window.devicePixelRatio
+            }
+        });
+
+        // Initialize Board
+        function createBoard() {
+            const rows = 16;
+            const pinRad = 5;
+            const gapX = 46;
+            const gapY = 42;
+            const startY = 140;
+
+            for (let r = 0; r < rows; r++) {
+                const pinsInRow = r + 3;
+                const rowWidth = (pinsInRow - 1) * gapX;
+                const startX = (CW - rowWidth) / 2;
+
+                for (let c = 0; c < pinsInRow; c++) {
+                    const pin = Bodies.circle(startX + (c * gapX), startY + (r * gapY), pinRad, {
+                        isStatic: true,
+                        restitution: 0.6,
+                        friction: 0.05,
+                        render: { fillStyle: '#2a2a35', strokeStyle: '#d4af37', lineWidth: 1 },
+                        label: 'peg'
+                    });
+                    Composite.add(engine.world, pin);
+                }
+            }
+
+            // Slots
+            const slotCount = CONFIG.multipliers.length;
+            const slotW = CW / slotCount;
+            const bar = document.getElementById('multiplier-bar');
+
+            CONFIG.multipliers.forEach((m, i) => {
+                const x = (i * slotW) + (slotW / 2);
+                const sensor = Bodies.rectangle(x, CH - 25, slotW - 6, 50, {
+                    isStatic: true,
+                    isSensor: true,
+                    label: `slot_${i}`,
+                    mult: m,
+                    render: { visible: false }
+                });
+                Composite.add(engine.world, sensor);
+
+                // UI
+                const div = document.createElement('div');
+                div.className = 'slot-pill';
+                div.id = `slot-ui-${i}`;
+                div.style.backgroundColor = getTierColor(m);
+                div.innerText = `${m}x`;
+                bar.appendChild(div);
+
+                // Add physical dividers
+                if (i < slotCount) {
+                    const wall = Bodies.rectangle(i * slotW, CH - 30, 4, 60, { 
+                        isStatic: true, 
+                        render: { fillStyle: '#1a1a24' } 
+                    });
+                    Composite.add(engine.world, wall);
+                }
+            });
+        }
+
+        function getTierColor(m) {
+            if (m >= 100) return CONFIG.colors.jackpot;
+            if (m >= 40) return CONFIG.colors.high;
+            if (m >= 10) return CONFIG.colors.mid;
+            if (m >= 1) return CONFIG.colors.safe;
+            return CONFIG.colors.loss;
+        }
+
+        // --- AUDIO ENGINE (Pure Synth) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSfx(freq, type = 'sine', vol = 0.1, duration = 0.1) {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            g.gain.setValueAtTime(vol, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(g);
+            g.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // --- GAMEPLAY LOGIC ---
+
+        function initiateDrop(zone) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const bet = parseFloat(document.getElementById('bet-val').value);
+            if (STATE.balance < bet) {
+                stopAuto();
+                return notify("Insufficient Sovereignty");
+            }
+
+            STATE.balance -= bet;
+            STATE.drops++;
+            updateUI();
+
+            let dropX = CW / 2;
+            if (zone === 'left') dropX = CW * 0.2 + (Math.random() * 40);
+            if (zone === 'right') dropX = CW * 0.8 - (Math.random() * 40);
+            if (zone === 'center') dropX = CW / 2 + (Math.random() * 60 - 30);
+
+            const ball = Bodies.circle(dropX, 40, 10, {
+                restitution: 0.5,
+                friction: 0.02,
+                density: 0.1,
+                label: 'ball',
+                bet: bet,
+                render: { 
+                    fillStyle: '#ffffff',
+                    strokeStyle: '#00f3ff',
+                    lineWidth: 3
+                }
+            });
+
+            // Initial nudge
+            Body.setVelocity(ball, { x: (Math.random() - 0.5) * 3, y: 2 });
+            Composite.add(engine.world, ball);
+            STATE.activeBalls++;
+        }
+
+        Events.on(engine, 'collisionStart', (e) => {
+            e.pairs.forEach(pair => {
+                const { bodyA, bodyB } = pair;
+                
+                // Peg hit
+                if (bodyA.label === 'peg' || bodyB.label === 'peg') {
+                    playSfx(400 + Math.random() * 200, 'sine', 0.03, 0.05);
+                }
+
+                // Slot hit
+                const slot = bodyA.label.includes('slot_') ? bodyA : (bodyB.label.includes('slot_') ? bodyB : null);
+                const ball = bodyA.label === 'ball' ? bodyA : (bodyB.label === 'ball' ? bodyB : null);
+
+                if (slot && ball) resolveLanding(ball, slot);
+            });
+        });
+
+        function resolveLanding(ball, slot) {
+            const mult = slot.mult;
+            const payout = ball.bet * mult;
+            
+            STATE.balance += payout;
+            STATE.profit += (payout - ball.bet);
+            STATE.xp += CONFIG.xpPerDrop;
+            if (mult > STATE.maxMult) STATE.maxMult = mult;
+
+            // FX
+            const idx = slot.label.split('_')[1];
+            const ui = document.getElementById(`slot-ui-${idx}`);
+            ui.classList.add('active-hit');
+            setTimeout(() => ui.classList.remove('active-hit'), 300);
+
+            if (mult >= 10) {
+                playSfx(600, 'square', 0.1, 0.4);
+                setTimeout(() => playSfx(800, 'square', 0.1, 0.4), 100);
+                triggerTension(true);
+            } else {
+                playSfx(200, 'sine', 0.05, 0.1);
+            }
+
+            logHistory(mult, payout - ball.bet);
+            Composite.remove(engine.world, ball);
+            STATE.activeBalls--;
+            checkLevel();
+            updateUI();
+        }
+
+        // --- UI & SYSTEMS ---
+
+        function updateUI() {
+            document.getElementById('balance-val').innerText = STATE.balance.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('session-profit').innerText = (STATE.profit >= 0 ? '+' : '') + '$' + STATE.profit.toFixed(2);
+            document.getElementById('session-profit').className = STATE.profit >= 0 ? 'text-green-400' : 'text-red-400';
+            document.getElementById('stat-drops').innerText = STATE.drops;
+            document.getElementById('stat-max').innerText = STATE.maxMult + 'x';
+            document.getElementById('level-display').innerText = `LVL ${String(STATE.level).padStart(2, '0')}`;
+            
+            const nextLvlXp = CONFIG.levelUpBase * STATE.level;
+            const xpPerc = (STATE.xp / nextLvlXp) * 100;
+            document.getElementById('xp-bar-inner').style.width = xpPerc + '%';
+            document.getElementById('xp-progress').style.width = xpPerc + '%';
+
+            // Mood Engine
+            const dot = document.getElementById('ai-mood-dot');
+            const txt = document.getElementById('ai-mood-text');
+            if (STATE.activeBalls > 5) {
+                dot.className = 'ai-status status-hype';
+                txt.innerText = 'VOLATILE';
+                txt.className = 'text-[9px] uppercase text-red-500 font-bold';
+            } else if (STATE.activeBalls > 0) {
+                dot.className = 'ai-status status-tense';
+                txt.innerText = 'ACTIVE';
+                txt.className = 'text-[9px] uppercase text-yellow-500 font-bold';
+            } else {
+                dot.className = 'ai-status status-calm';
+                txt.innerText = 'OPTIMAL';
+                txt.className = 'text-[9px] uppercase text-cyan-400 font-bold';
+            }
+        }
+
+        function checkLevel() {
+            const nextLvlXp = CONFIG.levelUpBase * STATE.level;
+            if (STATE.xp >= nextLvlXp) {
+                STATE.level++;
+                STATE.xp = 0;
+                playSfx(880, 'sawtooth', 0.2, 0.8);
+                notify("Sovereign Level Increased");
+            }
+        }
+
+        function logHistory(m, p) {
+            const list = document.getElementById('history-list');
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center p-2 rounded bg-white/5 border-l-2 text-[11px] animate-slide-in';
+            item.style.borderLeftColor = getTierColor(m);
+            item.innerHTML = `
+                <span class="font-bold" style="color: ${getTierColor(m)}">${m}x</span>
+                <span class="${p >= 0 ? 'text-green-400' : 'text-gray-500'}">${p >= 0 ? '+' : ''}$${p.toFixed(2)}</span>
+            `;
+            list.prepend(item);
+            if (list.children.length > 15) list.lastChild.remove();
+        }
+
+        function triggerTension(isWin) {
+            const fx = document.getElementById('tension-fx');
+            const stage = document.getElementById('physics-container');
+            
+            fx.style.opacity = '1';
+            if(isWin) stage.style.transform = 'scale(1.02) rotate(0.5deg)';
+            
+            setTimeout(() => {
+                fx.style.opacity = '0';
+                stage.style.transform = 'scale(1) rotate(0)';
+            }, 500);
+        }
+
+        function adjBet(val) {
+            const input = document.getElementById('bet-val');
+            if (val === 0) input.value = 1.00;
+            else if (val === 1000) input.value = 1000.00;
+            else if (val === 0.5 || val === 2) input.value = (parseFloat(input.value) * val).toFixed(2);
+            
+            if (input.value > 1000) input.value = 1000.00;
+            if (input.value < 1) input.value = 1.00;
+        }
+
+        function toggleAuto() {
+            STATE.isAuto = !STATE.isAuto;
+            const led = document.getElementById('auto-led');
+            if (STATE.isAuto) {
+                led.className = 'w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]';
+                STATE.autoTimer = setInterval(() => {
+                    const zones = ['left', 'center', 'right'];
+                    initiateDrop(zones[Math.floor(Math.random()*3)]);
+                }, 600);
+            } else {
+                stopAuto();
+            }
+        }
+
+        function stopAuto() {
+            STATE.isAuto = false;
+            clearInterval(STATE.autoTimer);
+            document.getElementById('auto-led').className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_red]';
+        }
+
+        function notify(msg) {
+            const n = document.createElement('div');
+            n.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 rounded-full bg-yellow-500 text-black cinzel font-bold text-xs tracking-widest animate-bounce z-[100]';
+            n.innerText = msg;
+            document.body.appendChild(n);
+            setTimeout(() => n.remove(), 3000);
+        }
+
+        function prestigeReset() {
+            if (STATE.level < 5) return notify("Lvl 05 Required");
+            STATE.level = 1;
+            STATE.xp = 0;
+            notify("Sovereign Prestige Accepted");
+            updateUI();
+        }
+
+        // Init
+        window.onload = () => {
+            createBoard();
+            Render.run(render);
+            Runner.run(Runner.create(), engine);
+            updateUI();
+        };
+
+    </script>
+</body>
+</html>
