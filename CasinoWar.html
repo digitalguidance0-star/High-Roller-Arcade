@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casino War Turbo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --bg-dark: #0a0a0b;
+            --card-bg: #161618;
+            --accent-gold: #d4af37;
+            --accent-blue: #3b82f6;
+            --win-green: #22c55e;
+            --loss-red: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-slot {
+            perspective: 1000px;
+            width: 120px;
+            height: 170px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 10px 10px;
+        }
+
+        .card-front {
+            background: white;
+            color: #1a1a1a;
+            transform: rotateY(180deg);
+        }
+
+        .card-front.red { color: #ef4444; }
+
+        .turbo .card-inner { transition: transform 0.15s ease-out; }
+
+        .glow-win { box-shadow: 0 0 25px var(--win-green); border-color: var(--win-green); }
+        .glow-loss { box-shadow: 0 0 25px var(--loss-red); border-color: var(--loss-red); }
+        .glow-tie { box-shadow: 0 0 25px var(--accent-blue); border-color: var(--accent-blue); }
+
+        .btn-primary {
+            background: linear-gradient(to bottom, #fde047, #d4af37);
+            color: black;
+            transition: all 0.2s;
+        }
+        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
+        .btn-primary:disabled { background: #333; color: #666; transform: none; cursor: not-allowed; }
+
+        .chip {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .chip:hover { transform: translateY(-5px); }
+        .chip:active { transform: scale(0.9); }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 640px) {
+            .card-slot { width: 90px; height: 130px; }
+            .card-face { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <div class="p-4 flex justify-between items-center glass border-b">
+        <div class="flex flex-col">
+            <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Balance</span>
+            <span id="balance-display" class="text-xl font-bold text-white">$1,000.00</span>
+        </div>
+        
+        <div class="flex gap-4 items-center">
+            <div class="flex flex-col items-center">
+                <span class="text-[10px] text-gray-500 uppercase">Turbo</span>
+                <label class="relative inline-flex items-center cursor-pointer mt-1">
+                    <input type="checkbox" id="turbo-toggle" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-yellow-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </label>
+            </div>
+            <button onclick="resetGame()" class="text-gray-400 hover:text-white transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div class="flex-1 relative flex flex-col justify-around py-8 overflow-hidden">
+        
+        <!-- Dealer Zone -->
+        <div class="flex flex-col items-center space-y-2">
+            <div id="dealer-card-slot" class="card-slot">
+                <div class="card-inner" id="dealer-card-inner">
+                    <div class="card-face card-back"></div>
+                    <div class="card-face card-front" id="dealer-card-front">?</div>
+                </div>
+            </div>
+            <span class="text-xs text-gray-500 font-bold uppercase tracking-tighter">Dealer</span>
+        </div>
+
+        <!-- Result Banner -->
+        <div class="h-16 flex items-center justify-center">
+            <div id="result-banner" class="text-3xl font-black italic uppercase tracking-tighter opacity-0 scale-50 transition-all duration-300">
+                Player Wins
+            </div>
+        </div>
+
+        <!-- Player Zone -->
+        <div class="flex flex-col items-center space-y-2">
+            <span class="text-xs text-gray-500 font-bold uppercase tracking-tighter">Player</span>
+            <div id="player-card-slot" class="card-slot">
+                <div class="card-inner" id="player-card-inner">
+                    <div class="card-face card-back"></div>
+                    <div class="card-face card-front" id="player-card-front">?</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- War Overlay Modal -->
+        <div id="war-modal" class="hidden absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-6 text-center">
+            <div class="glass p-8 rounded-2xl max-w-sm w-full border-yellow-500/30">
+                <h2 class="text-2xl font-black mb-2 text-yellow-500">TIE DETECTED</h2>
+                <p class="text-gray-400 text-sm mb-6">Will you surrender half your bet or go to war for a 2:1 payout?</p>
+                <div class="flex gap-3">
+                    <button onclick="handleWar(false)" class="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-lg font-bold text-xs uppercase transition">Surrender</button>
+                    <button onclick="handleWar(true)" class="flex-1 btn-primary py-3 rounded-lg font-bold text-xs uppercase">Go To War</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Betting Controls -->
+    <div class="glass border-t p-4 pb-8 space-y-4">
+        
+        <!-- Stats Mini Panel (Mobile Hidden) -->
+        <div class="hidden sm:flex justify-center gap-8 text-[10px] text-gray-500 uppercase font-bold tracking-widest border-b border-white/5 pb-4">
+            <div>Hands: <span id="stat-hands" class="text-white">0</span></div>
+            <div>Win Rate: <span id="stat-winrate" class="text-white">0%</span></div>
+            <div>Tie Streak: <span id="stat-ties" class="text-white">0</span></div>
+        </div>
+
+        <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            
+            <!-- Side Bet -->
+            <div class="flex flex-col gap-2">
+                <label class="text-[10px] text-blue-400 font-black uppercase">Tie Side Bet (10:1)</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 font-bold">$</span>
+                    <input type="number" id="tie-bet-input" value="0" step="5" class="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg py-2 pl-8 pr-4 text-white font-bold focus:outline-none focus:border-blue-500 transition">
+                </div>
+            </div>
+
+            <!-- Main Bet and Action -->
+            <div class="flex flex-col items-center gap-3">
+                <div class="flex items-end gap-1 mb-1">
+                    <span class="text-[10px] text-gray-500 font-black uppercase mr-2">Bet:</span>
+                    <span id="current-bet-display" class="text-2xl font-black">$50</span>
+                </div>
+                <button id="deal-btn" onclick="deal()" class="btn-primary w-full py-4 rounded-xl font-black text-xl uppercase shadow-lg shadow-yellow-500/10">Deal Hand</button>
+            </div>
+
+            <!-- Quick Chips -->
+            <div class="flex justify-center gap-3">
+                <div onclick="addBet(10)" class="chip w-10 h-10 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-400">10</div>
+                <div onclick="addBet(25)" class="chip w-10 h-10 rounded-full border-2 border-dashed border-red-500 flex items-center justify-center text-[10px] font-bold text-red-500">25</div>
+                <div onclick="addBet(100)" class="chip w-10 h-10 rounded-full border-2 border-dashed border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-500">100</div>
+                <div onclick="clearBet()" class="chip w-10 h-10 rounded-full border-2 border-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 uppercase">CLR</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        const VALUE_MAP = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+
+        // Game State
+        let state = {
+            balance: 1000,
+            betAmount: 50,
+            tieBet: 0,
+            deck: [],
+            playerCard: null,
+            dealerCard: null,
+            isDealing: false,
+            stats: { hands: 0, wins: 0, ties: 0 },
+            turbo: false
+        };
+
+        // DOM Elements
+        const balanceEl = document.getElementById('balance-display');
+        const betEl = document.getElementById('current-bet-display');
+        const tieBetInput = document.getElementById('tie-bet-input');
+        const dealBtn = document.getElementById('deal-btn');
+        const resultBanner = document.getElementById('result-banner');
+        const turboToggle = document.getElementById('turbo-toggle');
+        const warModal = document.getElementById('war-modal');
+
+        const playerCardInner = document.getElementById('player-card-inner');
+        const playerCardFront = document.getElementById('player-card-front');
+        const dealerCardInner = document.getElementById('dealer-card-inner');
+        const dealerCardFront = document.getElementById('dealer-card-front');
+
+        // Initialization
+        function init() {
+            createDeck();
+            updateUI();
+            
+            turboToggle.addEventListener('change', (e) => {
+                state.turbo = e.target.checked;
+                document.body.classList.toggle('turbo', state.turbo);
+            });
+        }
+
+        function createDeck() {
+            state.deck = [];
+            for (let suit of SUITS) {
+                for (let value of VALUES) {
+                    state.deck.push({ suit, value, rank: VALUE_MAP[value] });
+                }
+            }
+            shuffle(state.deck);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function drawCard() {
+            if (state.deck.length < 10) createDeck();
+            return state.deck.pop();
+        }
+
+        function updateUI() {
+            balanceEl.innerText = `$${state.balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            betEl.innerText = `$${state.betAmount}`;
+            
+            // Stats
+            document.getElementById('stat-hands').innerText = state.stats.hands;
+            const winRate = state.stats.hands > 0 ? Math.round((state.stats.wins / state.stats.hands) * 100) : 0;
+            document.getElementById('stat-winrate').innerText = `${winRate}%`;
+            document.getElementById('stat-ties').innerText = state.stats.ties;
+
+            dealBtn.disabled = state.isDealing || state.balance < (state.betAmount + state.tieBet);
+        }
+
+        function addBet(val) {
+            if (state.isDealing) return;
+            state.betAmount += val;
+            updateUI();
+        }
+
+        function clearBet() {
+            if (state.isDealing) return;
+            state.betAmount = 0;
+            updateUI();
+        }
+
+        function showResult(text, colorClass) {
+            resultBanner.innerText = text;
+            resultBanner.className = `text-3xl font-black italic uppercase tracking-tighter transition-all duration-300 opacity-100 scale-100 ${colorClass}`;
+            
+            setTimeout(() => {
+                if (!state.turbo) {
+                    resultBanner.classList.add('opacity-0', 'scale-50');
+                }
+            }, state.turbo ? 500 : 1500);
+        }
+
+        async function deal() {
+            if (state.isDealing) return;
+            
+            const tieBet = parseInt(tieBetInput.value) || 0;
+            if (state.balance < (state.betAmount + tieBet)) return;
+
+            // Reset UI
+            state.isDealing = true;
+            resultBanner.className = "opacity-0 scale-50 transition-all duration-300";
+            playerCardInner.classList.remove('flipped');
+            dealerCardInner.classList.remove('flipped');
+            playerCardInner.classList.remove('glow-win', 'glow-loss', 'glow-tie');
+            dealerCardInner.classList.remove('glow-win', 'glow-loss', 'glow-tie');
+
+            // Deduct bets
+            state.balance -= (state.betAmount + tieBet);
+            state.tieBet = tieBet;
+            updateUI();
+
+            // Draw
+            state.playerCard = drawCard();
+            state.dealerCard = drawCard();
+
+            renderCard(playerCardFront, state.playerCard);
+            renderCard(dealerCardFront, state.dealerCard);
+
+            // Flip sequence
+            const delay = state.turbo ? 100 : 400;
+            
+            playerCardInner.classList.add('flipped');
+            await new Promise(r => setTimeout(r, delay));
+            dealerCardInner.classList.add('flipped');
+            await new Promise(r => setTimeout(r, delay));
+
+            evaluate();
+        }
+
+        function renderCard(el, card) {
+            const isRed = card.suit === 'hearts' || card.suit === 'diamonds';
+            el.className = `card-face card-front ${isRed ? 'red' : ''}`;
+            
+            const suitSymbols = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
+            el.innerHTML = `
+                <div class="absolute top-2 left-2 text-sm">${card.value}</div>
+                <div class="text-4xl">${suitSymbols[card.suit]}</div>
+                <div class="absolute bottom-2 right-2 text-sm rotate-180">${card.value}</div>
+            `;
+        }
+
+        function evaluate() {
+            state.stats.hands++;
+            
+            // Check Side Bet first
+            if (state.playerCard.rank === state.dealerCard.rank && state.tieBet > 0) {
+                state.balance += (state.tieBet * 11); // 10:1 + original
+            }
+
+            if (state.playerCard.rank > state.dealerCard.rank) {
+                // Player Wins
+                state.balance += (state.betAmount * 2);
+                state.stats.wins++;
+                playerCardInner.classList.add('glow-win');
+                showResult('Player Wins', 'text-green-500');
+                endRound();
+            } 
+            else if (state.playerCard.rank < state.dealerCard.rank) {
+                // Dealer Wins
+                dealerCardInner.classList.add('glow-win');
+                showResult('Dealer Wins', 'text-red-500');
+                endRound();
+            } 
+            else {
+                // TIE
+                state.stats.ties++;
+                playerCardInner.classList.add('glow-tie');
+                dealerCardInner.classList.add('glow-tie');
+                showResult('Tie Game', 'text-blue-400');
+                
+                if (state.turbo) {
+                    // In Turbo, ties just push the main bet back
+                    state.balance += state.betAmount;
+                    endRound();
+                } else {
+                    warModal.classList.remove('hidden');
+                }
+            }
+        }
+
+        async function handleWar(goForIt) {
+            warModal.classList.add('hidden');
+            
+            if (!goForIt) {
+                // Surrender: give back half
+                state.balance += (state.betAmount / 2);
+                showResult('Surrendered', 'text-gray-400');
+                endRound();
+                return;
+            }
+
+            // WAR MECHANIC
+            // Player needs to put up another equal bet
+            if (state.balance < state.betAmount) {
+                alert("Insufficient funds for war!");
+                state.balance += (state.betAmount / 2);
+                endRound();
+                return;
+            }
+
+            state.balance -= state.betAmount;
+            updateUI();
+
+            // Reset card visuals for the "Burn"
+            playerCardInner.classList.remove('flipped', 'glow-tie');
+            dealerCardInner.classList.remove('flipped', 'glow-tie');
+            
+            await new Promise(r => setTimeout(r, 600));
+
+            // Final War Deal
+            state.playerCard = drawCard();
+            state.dealerCard = drawCard();
+
+            renderCard(playerCardFront, state.playerCard);
+            renderCard(dealerCardFront, state.dealerCard);
+
+            playerCardInner.classList.add('flipped');
+            await new Promise(r => setTimeout(r, 400));
+            dealerCardInner.classList.add('flipped');
+            await new Promise(r => setTimeout(r, 400));
+
+            if (state.playerCard.rank > state.dealerCard.rank) {
+                // War Win: Pays 2:1 on the total wagered during war
+                state.balance += (state.betAmount * 3); // Return War Bet + win 2 units
+                state.stats.wins++;
+                playerCardInner.classList.add('glow-win');
+                showResult('Victory in War!', 'text-yellow-500');
+            } else {
+                // Ties go to house in war for fast resolution
+                dealerCardInner.classList.add('glow-win');
+                showResult('House Wins War', 'text-red-600');
+            }
+
+            endRound();
+        }
+
+        function endRound() {
+            state.isDealing = false;
+            updateUI();
+            
+            if (state.turbo) {
+                setTimeout(deal, 600);
+            }
+        }
+
+        function resetGame() {
+            location.reload();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
