@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TargetShooter | Precision Aim Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-dark: #0f172a;
+            --grid-color: rgba(56, 189, 248, 0.05);
+            --accent-cyan: #22d3ee;
+            --accent-blue: #3b82f6;
+            --alert-red: #ef4444;
+            --text-main: #f8fafc;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Tactical Grid Background */
+        .grid-bg {
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center center;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            cursor: crosshair;
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom Scrollbar for stats */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }
+
+        /* Animations */
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px) rotate(-1deg); }
+            50% { transform: translateX(4px) rotate(1deg); }
+            75% { transform: translateX(-4px) rotate(-1deg); }
+        }
+
+        .shake-active { animation: shake 0.2s ease-in-out; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        .stat-value {
+            font-family: monospace;
+            font-size: 1.25rem;
+            color: var(--accent-cyan);
+        }
+
+        .combo-text {
+            transition: transform 0.1s;
+        }
+        .combo-pop {
+            transform: scale(1.3);
+            color: #fff !important;
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .screen-flash-red {
+            position: absolute; inset: 0; background: rgba(239, 68, 68, 0.15);
+            z-index: 15; pointer-events: none; opacity: 0; transition: opacity 0.1s;
+        }
+
+        /* Grade Styling */
+        .grade-S-plus { color: #a855f7; text-shadow: 0 0 20px rgba(168, 85, 247, 0.6); }
+        .grade-S { color: #eab308; text-shadow: 0 0 20px rgba(234, 179, 8, 0.6); }
+        .grade-A { color: #22d3ee; }
+        .grade-B { color: #4ade80; }
+        .grade-C { color: #f97316; }
+        .grade-D { color: #ef4444; }
+
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+    <div id="flashOverlay" class="screen-flash-red"></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Container -->
+    <div id="uiContainer" class="ui-layer">
+        
+        <!-- MAIN MENU -->
+        <div id="mainMenu" class="absolute inset-0 flex items-center justify-center interactive p-4 transition-opacity duration-300">
+            <div class="glass-panel w-full max-w-4xl rounded-xl flex flex-col md:flex-row overflow-hidden border border-cyan-500/30">
+                
+                <!-- Left: Config -->
+                <div class="flex-1 p-8 border-b md:border-b-0 md:border-r border-slate-700/50 flex flex-col justify-center">
+                    <h1 class="text-5xl md:text-6xl font-bold mb-2 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 uppercase italic">
+                        TargetShooter
+                    </h1>
+                    <p class="text-slate-400 mb-8 uppercase tracking-widest text-sm">Precision Reflex Arena</p>
+
+                    <div class="mb-8">
+                        <label class="block text-cyan-400 text-sm font-bold mb-3 uppercase tracking-wider">Select Protocol</label>
+                        <div class="grid grid-cols-1 gap-3">
+                            <button class="diff-btn w-full py-3 px-4 rounded border border-slate-600 text-left hover:border-cyan-400 hover:bg-cyan-900/20 transition-all flex justify-between items-center" data-diff="casual">
+                                <div>
+                                    <span class="block font-bold text-lg">Casual</span>
+                                    <span class="text-xs text-slate-400">Slow targets, 60s, large hitboxes</span>
+                                </div>
+                            </button>
+                            <button class="diff-btn w-full py-3 px-4 rounded border border-cyan-500 bg-cyan-900/30 text-left transition-all flex justify-between items-center shadow-[0_0_15px_rgba(34,211,238,0.15)]" data-diff="competitive">
+                                <div>
+                                    <span class="block font-bold text-lg text-cyan-300">Competitive</span>
+                                    <span class="text-xs text-cyan-500/70">Medium speed, 45s, dynamic spawning</span>
+                                </div>
+                            </button>
+                            <button class="diff-btn w-full py-3 px-4 rounded border border-slate-600 text-left hover:border-red-400 hover:bg-red-900/20 transition-all flex justify-between items-center" data-diff="pro">
+                                <div>
+                                    <span class="block font-bold text-lg text-red-400">Pro Reflex</span>
+                                    <span class="text-xs text-slate-400">Fast erratic motion, 30s, tiny hitboxes</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="startBtn" class="btn-primary w-full py-4 rounded font-bold text-xl uppercase tracking-widest text-white shadow-lg">
+                        Initialize Arena
+                    </button>
+                </div>
+
+                <!-- Right: Stats -->
+                <div class="w-full md:w-80 bg-slate-900/50 p-8 flex flex-col justify-center">
+                    <h2 class="text-cyan-500 text-sm font-bold mb-6 uppercase tracking-widest flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Career Metrics
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end border-b border-slate-700/50 pb-2">
+                            <span class="text-slate-400 text-sm uppercase">High Score</span>
+                            <span class="stat-value" id="menuHighScore">0</span>
+                        </div>
+                        <div class="flex justify-between items-end border-b border-slate-700/50 pb-2">
+                            <span class="text-slate-400 text-sm uppercase">Best Accuracy</span>
+                            <span class="stat-value"><span id="menuHighAcc">0</span>%</span>
+                        </div>
+                        <div class="flex justify-between items-end border-b border-slate-700/50 pb-2">
+                            <span class="text-slate-400 text-sm uppercase">Fastest Reaction</span>
+                            <span class="stat-value"><span id="menuFastReact">--</span>ms</span>
+                        </div>
+                        <div class="flex justify-between items-end pb-2">
+                            <span class="text-slate-400 text-sm uppercase">Max Combo</span>
+                            <span class="stat-value" id="menuMaxCombo">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HUD (Gameplay) -->
+        <div id="gameHud" class="hidden flex-1 p-4 md:p-6 flex-col justify-between">
+            <!-- Top Bar -->
+            <div class="flex justify-between items-start">
+                <div class="glass-panel px-6 py-3 rounded-lg flex flex-col">
+                    <span class="text-cyan-500 text-xs font-bold uppercase tracking-widest mb-1">Score</span>
+                    <span id="hudScore" class="text-3xl md:text-4xl font-bold font-mono leading-none">0</span>
+                </div>
+
+                <!-- Timer -->
+                <div class="glass-panel px-8 py-3 rounded-lg flex flex-col items-center border-t-2 border-t-cyan-400" id="timerBox">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Time Remaining</span>
+                    <span id="hudTime" class="text-4xl md:text-5xl font-bold font-mono leading-none text-white">00.00</span>
+                </div>
+
+                <div class="glass-panel px-6 py-3 rounded-lg flex flex-col items-end">
+                    <span class="text-cyan-500 text-xs font-bold uppercase tracking-widest mb-1">Accuracy</span>
+                    <span id="hudAcc" class="text-3xl md:text-4xl font-bold font-mono leading-none">100%</span>
+                </div>
+            </div>
+
+            <!-- Combo & Reaction (Middle/Sides) -->
+            <div class="absolute top-1/2 left-4 md:left-8 transform -translate-y-1/2 flex flex-col gap-4">
+                <div class="glass-panel p-4 rounded-lg">
+                    <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Current Combo</div>
+                    <div class="text-4xl font-bold text-cyan-400 combo-text font-mono" id="hudCombo">x0</div>
+                </div>
+                <div class="glass-panel p-4 rounded-lg">
+                    <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Multiplier</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="hudMult">1.0x</div>
+                </div>
+            </div>
+
+            <div class="absolute top-1/2 right-4 md:right-8 transform -translate-y-1/2 flex flex-col gap-4 items-end">
+                 <div class="glass-panel p-4 rounded-lg text-right">
+                    <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Last Reaction</div>
+                    <div class="text-2xl font-bold text-white font-mono" id="hudReact">-- ms</div>
+                    <div class="text-xs mt-1 font-bold" id="hudReactRating"></div>
+                </div>
+            </div>
+            
+            <!-- Bottom Bar (Crosshair tip) -->
+            <div class="text-center pb-2 opacity-50 text-xs tracking-widest uppercase">
+                Acquire Targets. Fire at Center.
+            </div>
+        </div>
+
+        <!-- RESULTS SCREEN -->
+        <div id="resultsScreen" class="hidden absolute inset-0 flex items-center justify-center interactive p-4 bg-slate-900/80 backdrop-blur-sm">
+            <div class="glass-panel w-full max-w-2xl rounded-xl p-8 border border-cyan-500/50 shadow-[0_0_40px_rgba(34,211,238,0.1)] flex flex-col">
+                
+                <div class="text-center mb-8">
+                    <h2 class="text-xl text-cyan-500 font-bold uppercase tracking-widest mb-2">Session Complete</h2>
+                    <div class="text-6xl font-bold font-mono text-white mb-4" id="resScore">0</div>
+                    <div class="inline-block px-4 py-1 rounded-full bg-slate-800 border border-slate-600">
+                        <span class="text-sm text-slate-300 uppercase">Performance Grade: </span>
+                        <span id="resGrade" class="text-2xl font-bold ml-2 grade-A">A</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-800/50 p-4 rounded border border-slate-700 text-center">
+                        <div class="text-slate-400 text-xs uppercase mb-1">Accuracy</div>
+                        <div class="text-2xl font-mono text-cyan-400"><span id="resAcc">0</span>%</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded border border-slate-700 text-center">
+                        <div class="text-slate-400 text-xs uppercase mb-1">Avg Reaction</div>
+                        <div class="text-2xl font-mono text-cyan-400"><span id="resReact">0</span>ms</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded border border-slate-700 text-center">
+                        <div class="text-slate-400 text-xs uppercase mb-1">Headshots</div>
+                        <div class="text-2xl font-mono text-cyan-400" id="resHeadshots">0</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded border border-slate-700 text-center">
+                        <div class="text-slate-400 text-xs uppercase mb-1">Max Combo</div>
+                        <div class="text-2xl font-mono text-cyan-400" id="resCombo">0</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="btnPlayAgain" class="btn-primary flex-1 py-3 rounded font-bold uppercase tracking-wider text-white">
+                        Deploy Again
+                    </button>
+                    <button id="btnMenu" class="flex-1 py-3 rounded border border-slate-600 hover:bg-slate-800 font-bold uppercase tracking-wider transition-colors text-slate-300">
+                        System Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * TargetShooter Logic
+ * High performance Canvas rendering + Web Audio synthesis
+ */
+
+// --- 1. CONFIGURATION & STATE ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false }); // Optimize
+let width, height;
+
+const DIFFICULTIES = {
+    casual: {
+        time: 60,
+        baseTargetSize: 40,
+        sizeVariance: 20,
+        speedMult: 0.8,
+        maxTargets: 3,
+        spawnRate: 1200, // ms
+        erratic: false
+    },
+    competitive: {
+        time: 45,
+        baseTargetSize: 25,
+        sizeVariance: 15,
+        speedMult: 1.5,
+        maxTargets: 4,
+        spawnRate: 800,
+        erratic: false
+    },
+    pro: {
+        time: 30,
+        baseTargetSize: 15,
+        sizeVariance: 10,
+        speedMult: 2.5,
+        maxTargets: 5,
+        spawnRate: 600,
+        erratic: true // adds sine wave motion
+    }
+};
+
+let currentDiff = 'competitive';
+let gameState = 'menu'; // menu, playing, results
+let animationId;
+let lastFrameTime = 0;
+
+let session = {
+    score: 0,
+    shotsFired: 0,
+    hits: 0,
+    misses: 0,
+    combo: 0,
+    bestCombo: 0,
+    headshots: 0,
+    reactionTimes: [],
+    timeLeft: 0,
+    lastSpawnTime: 0
+};
+
+// Career stats (saved to local storage if needed, but in-memory for this req)
+let careerStats = {
+    highScore: 0,
+    highAcc: 0,
+    fastestReact: Infinity,
+    maxCombo: 0
+};
+
+let entities = {
+    targets: [],
+    particles: [],
+    floatingTexts: []
+};
+
+// --- 2. AUDIO SYNTHESIS (Web Audio API) ---
+// Ensures no missing assets and fits the clean UI tone
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function playTone(freq, type, duration, vol = 0.1) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    
+    gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+const SFX = {
+    hit: () => playTone(800, 'sine', 0.1, 0.2),
+    headshot: () => {
+        playTone(1200, 'sine', 0.1, 0.3);
+        setTimeout(() => playTone(1600, 'triangle', 0.15, 0.2), 50);
+    },
+    miss: () => playTone(150, 'sawtooth', 0.2, 0.1),
+    comboUp: (comboTier) => playTone(400 + (comboTier * 100), 'square', 0.15, 0.1),
+    timeTick: () => playTone(1000, 'sine', 0.05, 0.05),
+    gameOver: () => {
+        playTone(300, 'sawtooth', 0.5, 0.2);
+        setTimeout(() => playTone(200, 'sawtooth', 0.7, 0.2), 200);
+    }
+};
+
+// --- 3. ENTITY CLASSES ---
+
+class Target {
+    constructor() {
+        const conf = DIFFICULTIES[currentDiff];
+        this.radius = conf.baseTargetSize + Math.random() * conf.sizeVariance;
+        
+        // Ensure spawn is inside bounds
+        const pad = this.radius * 2;
+        this.x = pad + Math.random() * (width - pad * 2);
+        this.y = pad + Math.random() * (height - pad * 2);
+        
+        // Velocity
+        const speed = (1 + Math.random() * 2) * conf.speedMult * (width / 1920); // scale speed by screen width
+        const angle = Math.random() * Math.PI * 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        
+        this.spawnTime = performance.now();
+        this.baseY = this.y; // For erratic movement
+        this.timeOffsets = Math.random() * 100;
+
+        // Visuals
+        this.scale = 0; // for spawn animation
+        this.isDead = false;
+        
+        // Point value logic
+        this.basePoints = 100;
+        this.sizeMult = conf.baseTargetSize / this.radius;
+        this.speedMult = speed;
+    }
+
+    update(dt) {
+        if (this.scale < 1) this.scale += 0.1;
+
+        const conf = DIFFICULTIES[currentDiff];
+
+        this.x += this.vx * (dt / 16);
+        this.y += this.vy * (dt / 16);
+
+        if (conf.erratic) {
+            this.vy += Math.sin(performance.now() / 200 + this.timeOffsets) * 0.5;
+        }
+
+        // Bounce logic
+        if (this.x - this.radius < 0) { this.x = this.radius; this.vx *= -1; }
+        if (this.x + this.radius > width) { this.x = width - this.radius; this.vx *= -1; }
+        if (this.y - this.radius < 0) { this.y = this.radius; this.vy *= -1; }
+        if (this.y + this.radius > height) { this.y = height - this.radius; this.vy *= -1; }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(this.scale, this.scale);
+        
+        // Outer glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#22d3ee';
+        
+        // Main body
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.stroke();
+
+        ctx.shadowBlur = 0; // Reset for inner details
+
+        // Inner rings
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Bullseye (Headshot zone)
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = '#ef4444'; // Red center
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, color, speed, size) {
+        this.x = x; this.y = y;
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = Math.random() * speed;
+        this.vx = Math.cos(angle) * velocity;
+        this.vy = Math.sin(angle) * velocity;
+        this.life = 1.0;
+        this.color = color;
+        this.size = size;
+        this.decay = 0.02 + Math.random() * 0.03;
+    }
+    update(dt) {
+        this.x += this.vx * (dt/16);
+        this.y += this.vy * (dt/16);
+        this.life -= this.decay * (dt/16);
+    }
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+class FloatingText {
+    constructor(x, y, text, color, isBig = false) {
+        this.x = x; this.y = y;
+        this.text = text;
+        this.color = color;
+        this.life = 1.0;
+        this.vy = -1;
+        this.isBig = isBig;
+    }
+    update(dt) {
+        this.y += this.vy * (dt/16);
+        this.life -= 0.02 * (dt/16);
+    }
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.font = this.isBig ? 'bold 24px monospace' : 'bold 16px monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = this.color;
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// --- 4. CORE ENGINE ---
+
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+function spawnTarget() {
+    const conf = DIFFICULTIES[currentDiff];
+    if (entities.targets.length < conf.maxTargets) {
+        entities.targets.push(new Target());
+    }
+}
+
+function createExplosion(x, y, color, isHeadshot) {
+    const count = isHeadshot ? 20 : 10;
+    for(let i=0; i<count; i++) {
+        entities.particles.push(new Particle(x, y, color, isHeadshot ? 8 : 5, Math.random() * 3 + 1));
+    }
+}
+
+function getMultiplier() {
+    if (session.combo >= 20) return 3.0;
+    if (session.combo >= 12) return 2.5;
+    if (session.combo >= 8) return 2.0;
+    if (session.combo >= 5) return 1.5;
+    if (session.combo >= 3) return 1.2;
+    return 1.0;
+}
+
+function screenShake() {
+    document.getElementById('gameCanvas').classList.add('shake-active');
+    setTimeout(() => {
+        document.getElementById('gameCanvas').classList.remove('shake-active');
+    }, 200);
+}
+
+function screenFlashMiss() {
+    const flash = document.getElementById('flashOverlay');
+    flash.style.opacity = '1';
+    setTimeout(() => flash.style.opacity = '0', 100);
+}
+
+function updateHUD() {
+    document.getElementById('hudScore').innerText = Math.floor(session.score).toLocaleString();
+    
+    // Time
+    const timeStr = Math.max(0, session.timeLeft).toFixed(2);
+    const timerBox = document.getElementById('hudTime');
+    timerBox.innerText = timeStr;
+    if (session.timeLeft <= 10 && session.timeLeft > 0) {
+        timerBox.style.color = 'var(--alert-red)';
+        if (Math.floor(session.timeLeft * 10) % 10 === 0) SFX.timeTick(); // Heartbeat
+    } else {
+        timerBox.style.color = '#fff';
+    }
+
+    // Combo
+    const comboEl = document.getElementById('hudCombo');
+    comboEl.innerText = 'x' + session.combo;
+    document.getElementById('hudMult').innerText = getMultiplier().toFixed(1) + 'x';
+    
+    if (session.combo >= 10) comboEl.style.color = '#a855f7'; // Purple streak
+    else comboEl.style.color = 'var(--accent-cyan)';
+
+    // Accuracy
+    const acc = session.shotsFired > 0 ? ((session.hits / session.shotsFired) * 100).toFixed(1) : 100;
+    document.getElementById('hudAcc').innerText = acc + '%';
+}
+
+function getReactionRating(ms) {
+    if (ms < 250) return { text: 'ELITE', color: '#a855f7' };
+    if (ms < 400) return { text: 'FAST', color: '#22d3ee' };
+    if (ms < 600) return { text: 'NORMAL', color: '#4ade80' };
+    if (ms < 900) return { text: 'SLOW', color: '#f97316' };
+    return { text: 'LATE', color: '#ef4444' };
+}
+
+function calculateGrade(score, acc, avgReact) {
+    if (acc >= 95 && avgReact < 300) return { grade: 'S+', class: 'grade-S-plus' };
+    if (acc >= 90 && score > 20000) return { grade: 'S', class: 'grade-S' };
+    if (acc >= 80) return { grade: 'A', class: 'grade-A' };
+    if (acc >= 65) return { grade: 'B', class: 'grade-B' };
+    if (acc >= 50) return { grade: 'C', class: 'grade-C' };
+    return { grade: 'D', class: 'grade-D' };
+}
+
+// --- 5. INPUT HANDLING ---
+
+function handleInput(e) {
+    if (gameState !== 'playing') return;
+    initAudio(); // Resume context on user interaction
+    
+    e.preventDefault();
+    
+    let clientX, clientY;
+    if (e.type === 'touchstart') {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    session.shotsFired++;
+    let hitTarget = false;
+
+    // Check collision (reverse order to hit top target)
+    for (let i = entities.targets.length - 1; i >= 0; i--) {
+        const t = entities.targets[i];
+        const dist = Math.hypot(clientX - t.x, clientY - t.y);
+
+        if (dist <= t.radius) {
+            // HIT!
+            hitTarget = true;
+            session.hits++;
+            session.combo++;
+            if (session.combo > session.bestCombo) session.bestCombo = session.combo;
+
+            const isHeadshot = dist <= t.radius * 0.3;
+            if (isHeadshot) session.headshots++;
+
+            // Reaction Time
+            const reactTime = performance.now() - t.spawnTime;
+            session.reactionTimes.push(reactTime);
+            
+            // HUD Reaction Update
+            const reactData = getReactionRating(reactTime);
+            document.getElementById('hudReact').innerText = Math.floor(reactTime) + ' ms';
+            const rtEl = document.getElementById('hudReactRating');
+            rtEl.innerText = reactData.text;
+            rtEl.style.color = reactData.color;
+
+            // Scoring Math
+            let points = t.basePoints * t.sizeMult * t.speedMult * getMultiplier();
+            if (isHeadshot) points *= 1.5;
+            session.score += points;
+
+            // Audio & Visuals
+            if (isHeadshot) {
+                SFX.headshot();
+                createExplosion(t.x, t.y, '#ef4444', true);
+                entities.floatingTexts.push(new FloatingText(t.x, t.y - 20, "HEADSHOT", "#ef4444", true));
+            } else {
+                SFX.hit();
+                createExplosion(t.x, t.y, '#22d3ee', false);
+            }
+
+            entities.floatingTexts.push(new FloatingText(t.x, t.y, "+" + Math.floor(points), "#fff", false));
+
+            // Combo UI Pop
+            const comboEl = document.getElementById('hudCombo');
+            comboEl.classList.add('combo-pop');
+            setTimeout(() => comboEl.classList.remove('combo-pop'), 100);
+            
+            // Level up combo sound
+            if ([3, 5, 8, 12, 20].includes(session.combo)) {
+                SFX.comboUp(Math.floor(session.combo/4));
+            }
+
+            // Remove target
+            entities.targets.splice(i, 1);
+            break; 
+        }
+    }
+
+    if (!hitTarget) {
+        // MISS
+        session.misses++;
+        session.combo = 0;
+        SFX.miss();
+        screenShake();
+        screenFlashMiss();
+        createExplosion(clientX, clientY, '#ef4444', false);
+        entities.floatingTexts.push(new FloatingText(clientX, clientY, "MISS", "#ef4444", false));
+    }
+
+    updateHUD();
+}
+
+canvas.addEventListener('mousedown', handleInput);
+canvas.addEventListener('touchstart', handleInput, {passive: false});
+
+// --- 6. GAME LOOP ---
+
+function update(dt) {
+    const conf = DIFFICULTIES[currentDiff];
+
+    // Spawner logic
+    if (performance.now() - session.lastSpawnTime > conf.spawnRate) {
+        // Dynamic spawn scaling based on accuracy (>85% faster, <50% slower)
+        let rateAdjust = 1.0;
+        if (session.shotsFired > 10) {
+            const acc = session.hits / session.shotsFired;
+            if (acc > 0.85) rateAdjust = 0.8; // 20% faster
+            if (acc < 0.50) rateAdjust = 1.2; // 20% slower
+        }
+
+        if (entities.targets.length < conf.maxTargets && Math.random() > 0.2) {
+            spawnTarget();
+        }
+        session.lastSpawnTime = performance.now() + (conf.spawnRate * rateAdjust * (Math.random()*0.5 + 0.5));
+    }
+
+    entities.targets.forEach(t => t.update(dt));
+    entities.particles.forEach(p => p.update(dt));
+    entities.floatingTexts.forEach(f => f.update(dt));
+
+    // Cleanup dead entities
+    entities.particles = entities.particles.filter(p => p.life > 0);
+    entities.floatingTexts = entities.floatingTexts.filter(f => f.life > 0);
+
+    // Timer
+    session.timeLeft -= dt / 1000;
+    if (session.timeLeft <= 0) {
+        session.timeLeft = 0;
+        endGame();
+    }
+}
+
+function draw() {
+    // Clear and fill dark bg
+    ctx.fillStyle = 'var(--bg-dark)';
+    ctx.fillRect(0, 0, width, height);
+
+    // Grid effect drawing natively on canvas for better blend (optional, using CSS overlay currently)
+    
+    entities.targets.forEach(t => t.draw(ctx));
+    entities.particles.forEach(p => p.draw(ctx));
+    entities.floatingTexts.forEach(f => f.draw(ctx));
+}
+
+function loop(time) {
+    if (gameState !== 'playing') return;
+    
+    const dt = time - lastFrameTime;
+    lastFrameTime = time;
+
+    update(dt);
+    draw();
+    updateHUD();
+
+    if (gameState === 'playing') {
+        animationId = requestAnimationFrame(loop);
+    }
+}
+
+// --- 7. FLOW CONTROLLERS ---
+
+function startGame() {
+    initAudio();
+    gameState = 'playing';
+    
+    // Reset state
+    session = {
+        score: 0,
+        shotsFired: 0,
+        hits: 0,
+        misses: 0,
+        combo: 0,
+        bestCombo: 0,
+        headshots: 0,
+        reactionTimes: [],
+        timeLeft: DIFFICULTIES[currentDiff].time,
+        lastSpawnTime: performance.now()
+    };
+    
+    entities.targets = [];
+    entities.particles = [];
+    entities.floatingTexts = [];
+
+    // UI transitions
+    document.getElementById('mainMenu').classList.add('hidden');
+    document.getElementById('resultsScreen').classList.add('hidden');
+    document.getElementById('gameHud').classList.remove('hidden');
+    document.getElementById('gameHud').style.display = 'flex';
+
+    // Initial Spawns
+    spawnTarget();
+    spawnTarget();
+
+    lastFrameTime = performance.now();
+    animationId = requestAnimationFrame(loop);
+}
+
+function endGame() {
+    gameState = 'results';
+    cancelAnimationFrame(animationId);
+    SFX.gameOver();
+
+    // Calculate Final Stats
+    const acc = session.shotsFired > 0 ? ((session.hits / session.shotsFired) * 100).toFixed(1) : 0;
+    const avgReact = session.reactionTimes.length > 0 
+        ? Math.floor(session.reactionTimes.reduce((a,b)=>a+b,0) / session.reactionTimes.length) 
+        : 0;
+
+    // Update Career Stats
+    if (session.score > careerStats.highScore) careerStats.highScore = Math.floor(session.score);
+    if (acc > careerStats.highAcc) careerStats.highAcc = acc;
+    if (avgReact > 0 && avgReact < careerStats.fastestReact) careerStats.fastestReact = avgReact;
+    if (session.bestCombo > careerStats.maxCombo) careerStats.maxCombo = session.bestCombo;
+
+    // Populate Results UI
+    document.getElementById('resScore').innerText = Math.floor(session.score).toLocaleString();
+    document.getElementById('resAcc').innerText = acc;
+    document.getElementById('resReact').innerText = avgReact;
+    document.getElementById('resHeadshots').innerText = session.headshots;
+    document.getElementById('resCombo').innerText = session.bestCombo;
+
+    const gradeInfo = calculateGrade(session.score, acc, avgReact);
+    const gradeEl = document.getElementById('resGrade');
+    gradeEl.innerText = gradeInfo.grade;
+    gradeEl.className = `text-2xl font-bold ml-2 ${gradeInfo.class}`;
+
+    // Show UI
+    document.getElementById('gameHud').classList.add('hidden');
+    document.getElementById('gameHud').style.display = 'none';
+    document.getElementById('resultsScreen').classList.remove('hidden');
+    
+    // Dim background drawing
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.5)';
+    ctx.fillRect(0, 0, width, height);
+}
+
+function showMenu() {
+    gameState = 'menu';
+    document.getElementById('resultsScreen').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
+
+    // Update Menu Stats
+    document.getElementById('menuHighScore').innerText = careerStats.highScore.toLocaleString();
+    document.getElementById('menuHighAcc').innerText = careerStats.highAcc;
+    document.getElementById('menuFastReact').innerText = careerStats.fastestReact === Infinity ? '--' : careerStats.fastestReact;
+    document.getElementById('menuMaxCombo').innerText = careerStats.maxCombo;
+
+    ctx.clearRect(0, 0, width, height);
+}
+
+// --- 8. UI BINDINGS ---
+
+// Difficulty Selection
+document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        // Reset styles
+        document.querySelectorAll('.diff-btn').forEach(b => {
+            b.classList.remove('border-cyan-500', 'bg-cyan-900/30', 'shadow-[0_0_15px_rgba(34,211,238,0.15)]');
+            b.classList.add('border-slate-600');
+        });
+        
+        // Apply active style to clicked
+        const target = e.currentTarget;
+        target.classList.remove('border-slate-600');
+        target.classList.add('border-cyan-500', 'bg-cyan-900/30', 'shadow-[0_0_15px_rgba(34,211,238,0.15)]');
+        
+        currentDiff = target.dataset.diff;
+    });
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('btnPlayAgain').addEventListener('click', startGame);
+document.getElementById('btnMenu').addEventListener('click', showMenu);
+
+// Initial draw loop for menu background (floating demo targets)
+function menuBgLoop() {
+    if (gameState === 'menu') {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.1)';
+        ctx.fillRect(0, 0, width, height);
+        
+        if (Math.random() < 0.05 && entities.targets.length < 5) {
+            let t = new Target();
+            t.vx *= 0.2; // slow drift
+            t.vy *= 0.2;
+            entities.targets.push(t);
+        }
+        
+        entities.targets.forEach((t, i) => {
+            t.update(16);
+            t.draw(ctx);
+            // fade out and die
+            t.timeOffsets += 1;
+            if (t.timeOffsets > 300) entities.targets.splice(i, 1);
+        });
+    }
+    requestAnimationFrame(menuBgLoop);
+}
+
+// Start
+resize();
+menuBgLoop();
+
+</script>
+</body>
+</html>
