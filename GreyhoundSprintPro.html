@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreyhoundSprintPro™</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #12121a;
+    --panel2: #1a1a26;
+    --border: #2a2a40;
+    --accent: #f5c518;
+    --accent2: #ff4d6d;
+    --accent3: #00e5ff;
+    --text: #e8e8f0;
+    --muted: #6a6a8a;
+    --green: #00ff88;
+    --red: #ff4d6d;
+    --track: #1c2a1c;
+    --track-line: #2a3e2a;
+    --shadow: 0 4px 32px rgba(0,0,0,0.6);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:999; opacity:.4;
+  }
+
+  /* HEADER */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 28px;
+    background: var(--panel);
+    border-bottom: 2px solid var(--accent);
+    position:sticky; top:0; z-index:100;
+    box-shadow: 0 2px 40px rgba(245,197,24,0.15);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(245,197,24,0.5);
+    line-height:1;
+  }
+  .logo span { color: var(--accent2); }
+
+  .header-right {
+    display:flex; align-items:center; gap:20px;
+  }
+
+  .wallet {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-family: 'Bebas Neue';
+    font-size:20px;
+    letter-spacing:2px;
+    color: var(--green);
+    text-shadow: 0 0 10px rgba(0,255,136,0.4);
+  }
+  .wallet span { color: var(--muted); font-size:11px; font-family:'Space Mono'; margin-right:6px; }
+
+  .nav-btns { display:flex; gap:8px; }
+  .nav-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    font-family: 'Space Mono';
+    font-size: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all .2s;
+    border-radius:2px;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr 240px;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+    padding: 14px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow:hidden;
+  }
+
+  .panel-title {
+    font-family: 'Bebas Neue';
+    font-size:16px;
+    letter-spacing:3px;
+    color: var(--accent);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(245,197,24,0.05);
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel-title .dot {
+    width:6px; height:6px; border-radius:50%;
+    background: var(--accent); display:inline-block;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* BETTING PANEL */
+  .betting-panel { grid-column: 1; grid-row: 1/3; }
+
+  .dog-grid { padding: 12px; display:flex; flex-direction:column; gap:8px; }
+
+  .dog-card {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all .2s;
+    position:relative;
+    overflow:hidden;
+  }
+  .dog-card::before {
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(135deg, transparent 60%, rgba(245,197,24,0.04));
+    transition: opacity .2s;
+  }
+  .dog-card:hover { border-color: var(--accent); transform: translateX(2px); }
+  .dog-card.selected { border-color: var(--accent); background: rgba(245,197,24,0.08); }
+
+  .dog-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+
+  .dog-num {
+    font-family:'Bebas Neue'; font-size:22px;
+    width:28px; height:28px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:4px;
+    margin-right:8px;
+  }
+
+  .dog-name {
+    font-family: 'Barlow Condensed';
+    font-weight:700; font-size:14px;
+    letter-spacing:1px;
+    color: var(--text);
+    flex:1;
+  }
+
+  .dog-odds {
+    font-family:'Bebas Neue'; font-size:18px;
+    color: var(--accent2);
+    letter-spacing:1px;
+  }
+  .dog-odds-label { font-size:9px; color:var(--muted); display:block; text-align:right; }
+
+  .stat-bar-wrap { display:flex; align-items:center; gap:8px; }
+  .stat-label { font-size:9px; color:var(--muted); width:40px; }
+  .stat-bar { flex:1; height:4px; background: rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; }
+  .stat-fill { height:100%; border-radius:2px; transition: width 0.5s ease; }
+  .stat-fill.speed { background: linear-gradient(90deg, var(--accent), #ff9900); }
+  .stat-fill.stamina { background: linear-gradient(90deg, var(--accent3), #0099ff); }
+  .stat-val { font-size:9px; color:var(--muted); width:24px; text-align:right; }
+
+  /* BET CONTROLS */
+  .bet-controls {
+    padding: 14px;
+    border-top: 1px solid var(--border);
+    display:flex; flex-direction:column; gap:12px;
+  }
+
+  .bet-type-row { display:flex; gap:6px; }
+  .bet-type-btn {
+    flex:1; padding: 8px 4px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Bebas Neue';
+    font-size: 14px;
+    letter-spacing:1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all .2s;
+    text-align:center;
+  }
+  .bet-type-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .bet-type-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .bet-amount-row { display:flex; gap:8px; align-items:center; }
+  .bet-amount-label { font-size:10px; color:var(--muted); white-space:nowrap; }
+  .bet-amount-input {
+    flex:1; background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 10px;
+    font-family:'Space Mono'; font-size:13px;
+    border-radius:4px; outline:none;
+    transition: border-color .2s;
+  }
+  .bet-amount-input:focus { border-color: var(--accent); }
+
+  .quick-amounts { display:flex; gap:6px; }
+  .qa-btn {
+    flex:1; padding: 5px;
+    background: var(--panel2); border: 1px solid var(--border);
+    color: var(--muted); cursor:pointer; border-radius:3px;
+    font-family:'Space Mono'; font-size:10px;
+    transition: all .2s;
+  }
+  .qa-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  .place-bet-btn {
+    width:100%; padding: 13px;
+    background: var(--accent);
+    border: none; border-radius:6px;
+    color: #000;
+    font-family: 'Bebas Neue'; font-size:20px;
+    letter-spacing:3px;
+    cursor:pointer;
+    transition: all .2s;
+    box-shadow: 0 4px 20px rgba(245,197,24,0.3);
+  }
+  .place-bet-btn:hover { background: #ffd740; box-shadow: 0 4px 30px rgba(245,197,24,0.5); transform: translateY(-1px); }
+  .place-bet-btn:active { transform: translateY(0); }
+  .place-bet-btn:disabled { background: var(--border); color: var(--muted); cursor:not-allowed; box-shadow:none; transform:none; }
+
+  .pool-info { display:flex; justify-content:space-between; align-items:center; }
+  .pool-label { font-size:10px; color:var(--muted); }
+  .pool-val { font-family:'Bebas Neue'; font-size:18px; color:var(--green); letter-spacing:1px; }
+
+  /* ACTIVE BETS */
+  .active-bets { padding:12px; display:flex; flex-direction:column; gap:6px; }
+  .bet-chip {
+    display:flex; justify-content:space-between; align-items:center;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius:4px;
+    font-size:11px;
+  }
+  .bet-chip .dog-tag { color:var(--accent2); font-family:'Bebas Neue'; font-size:14px; letter-spacing:1px; }
+  .bet-chip .bet-tag { color:var(--accent3); font-size:10px; }
+  .bet-chip .amt-tag { color:var(--green); font-family:'Bebas Neue'; font-size:14px; }
+  .bet-chip .remove-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:0 0 0 8px; }
+  .bet-chip .remove-btn:hover { color:var(--accent2); }
+  .no-bets { color:var(--muted); font-size:11px; text-align:center; padding:10px; }
+
+  /* RACE TRACK */
+  .race-section { grid-column: 2; grid-row: 1; }
+
+  .track-area {
+    padding: 16px;
+    background: var(--track);
+    position:relative;
+  }
+
+  .track-wrap {
+    background: #0e1a0e;
+    border: 1px solid var(--track-line);
+    border-radius: 8px;
+    overflow:hidden;
+    padding: 12px 0;
+    position:relative;
+  }
+
+  /* FINISH LINE */
+  .finish-line {
+    position:absolute; right:70px; top:0; bottom:0;
+    width:3px;
+    background: repeating-linear-gradient(0deg, #fff 0, #fff 8px, #000 8px, #000 16px);
+    z-index:5;
+    opacity:0.7;
+  }
+  .finish-flag {
+    position:absolute; top:-16px; right:66px;
+    font-size:18px;
+  }
+
+  .lane {
+    display:flex; align-items:center;
+    padding: 5px 12px;
+    position:relative;
+    height: 52px;
+  }
+  .lane:nth-child(odd) { background: rgba(255,255,255,0.01); }
+  .lane-num {
+    font-family:'Bebas Neue'; font-size:16px;
+    color: var(--muted);
+    width:20px; text-align:center; flex-shrink:0;
+    margin-right:8px;
+  }
+  .lane-inner { flex:1; position:relative; height:36px; margin-right:80px; }
+  .dog-runner {
+    position:absolute; top:50%; transform: translateY(-50%);
+    left:0;
+    transition: left 0.05s linear;
+    display:flex; align-items:center; gap:4px;
+    z-index:2;
+  }
+  .dog-emoji { font-size:24px; }
+  .dog-runner-name {
+    font-family:'Barlow Condensed';
+    font-weight:600; font-size:11px;
+    color: var(--text);
+    white-space:nowrap;
+    background: rgba(0,0,0,0.5);
+    padding: 1px 4px; border-radius:2px;
+  }
+
+  /* Stamina event badge */
+  .event-badge {
+    font-size:14px;
+    animation: bounce 0.4s ease;
+  }
+  @keyframes bounce {
+    0%,100%{transform:scale(1)} 50%{transform:scale(1.4)}
+  }
+
+  .dog-rank-badge {
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    font-family:'Bebas Neue'; font-size:18px;
+    width:28px; text-align:center;
+    opacity:0;
+    transition: opacity .3s;
+  }
+  .dog-rank-badge.visible { opacity:1; }
+
+  .lane-dots {
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(90deg, transparent 0, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px);
+    pointer-events:none;
+  }
+
+  /* RACE CONTROLS */
+  .race-controls {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .race-status {
+    font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px;
+  }
+  .race-status.idle { color:var(--muted); }
+  .race-status.betting { color:var(--accent); }
+  .race-status.running { color:var(--accent3); animation: pulse 1s infinite; }
+  .race-status.finished { color:var(--green); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .ctrl-btns { display:flex; gap:8px; }
+  .ctrl-btn {
+    padding: 9px 20px;
+    font-family:'Bebas Neue'; font-size:15px; letter-spacing:2px;
+    border-radius:4px; cursor:pointer; transition:all .2s;
+    border: 2px solid;
+  }
+  .ctrl-btn.start { background:var(--green); border-color:var(--green); color:#000; }
+  .ctrl-btn.start:hover { box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .ctrl-btn.replay { background:transparent; border-color:var(--accent3); color:var(--accent3); }
+  .ctrl-btn.replay:hover { background:rgba(0,229,255,0.1); }
+  .ctrl-btn.next { background:var(--accent); border-color:var(--accent); color:#000; }
+  .ctrl-btn.next:hover { box-shadow:0 0 20px rgba(245,197,24,0.4); }
+  .ctrl-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+  /* COUNTDOWN */
+  .countdown-overlay {
+    position:absolute; inset:0;
+    background:rgba(0,0,0,0.75);
+    display:flex; align-items:center; justify-content:center;
+    z-index:10;
+    transition: opacity .4s;
+  }
+  .countdown-overlay.hidden { opacity:0; pointer-events:none; }
+  .countdown-num {
+    font-family:'Bebas Neue'; font-size:120px;
+    color:var(--accent);
+    text-shadow: 0 0 60px rgba(245,197,24,0.8);
+    animation: countZoom .8s ease;
+  }
+  @keyframes countZoom { 0%{transform:scale(2);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+  /* RESULTS */
+  .results-section { grid-column: 2; grid-row: 2; }
+  .results-inner { padding:14px; }
+
+  .podium { display:flex; gap:10px; margin-bottom:14px; }
+  .podium-spot {
+    flex:1;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius:6px;
+    padding:12px;
+    text-align:center;
+  }
+  .podium-spot:first-child { border-color: #ffd700; }
+  .podium-spot:nth-child(2) { border-color: #c0c0c0; }
+  .podium-spot:nth-child(3) { border-color: #cd7f32; }
+  .podium-rank { font-family:'Bebas Neue'; font-size:28px; }
+  .podium-spot:first-child .podium-rank { color:#ffd700; }
+  .podium-spot:nth-child(2) .podium-rank { color:#c0c0c0; }
+  .podium-spot:nth-child(3) .podium-rank { color:#cd7f32; }
+  .podium-name { font-family:'Barlow Condensed'; font-weight:700; font-size:15px; letter-spacing:1px; margin-top:4px; }
+  .podium-time { font-size:10px; color:var(--muted); margin-top:2px; }
+
+  .bet-results { display:flex; flex-direction:column; gap:6px; }
+  .bet-result-row {
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--panel2); border: 1px solid var(--border);
+    padding: 8px 12px; border-radius:4px;
+  }
+  .bet-result-row.win { border-color: var(--green); background: rgba(0,255,136,0.05); }
+  .bet-result-row.loss { border-color: #333; opacity:.6; }
+  .result-left { display:flex; align-items:center; gap:8px; }
+  .result-icon { font-size:16px; }
+  .result-desc { font-size:11px; color:var(--muted); }
+  .result-payout {
+    font-family:'Bebas Neue'; font-size:20px;
+    color:var(--green); letter-spacing:1px;
+  }
+  .result-payout.loss { color:var(--muted); }
+  .no-results { color:var(--muted); text-align:center; padding:20px; font-size:12px; }
+
+  /* SIDEBAR STATS */
+  .stats-panel { grid-column:3; grid-row:1/4; }
+  .stats-inner { padding:12px; }
+
+  .stat-section { margin-bottom:18px; }
+  .stat-section-title {
+    font-family:'Barlow Condensed'; font-weight:700; font-size:12px;
+    letter-spacing:2px; color:var(--muted); text-transform:uppercase;
+    margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;
+  }
+
+  .history-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 6px 8px;
+    border-radius:3px;
+    margin-bottom:3px;
+    background: var(--panel2);
+    font-size:11px;
+  }
+  .history-race { color:var(--muted); }
+  .history-winner { color:var(--accent2); font-family:'Barlow Condensed'; font-weight:700; font-size:13px; }
+  .history-payout { color:var(--green); font-family:'Bebas Neue'; font-size:13px; }
+
+  .leaderboard-row {
+    display:flex; align-items:center; gap:8px;
+    padding:6px 8px; margin-bottom:3px;
+    background:var(--panel2); border-radius:3px;
+    font-size:11px;
+  }
+  .lb-pos { font-family:'Bebas Neue'; font-size:16px; color:var(--muted); width:16px; }
+  .lb-name { flex:1; color:var(--text); }
+  .lb-score { font-family:'Bebas Neue'; font-size:15px; color:var(--accent); }
+
+  /* DOG TRENDS */
+  .trend-row {
+    display:flex; align-items:center; gap:6px; margin-bottom:6px;
+    font-size:11px;
+  }
+  .trend-name { width:70px; color:var(--text); font-family:'Barlow Condensed'; font-weight:600; font-size:12px; }
+  .trend-wins { color:var(--green); width:28px; text-align:right; font-family:'Bebas Neue'; font-size:14px; }
+  .trend-bar-outer { flex:1; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+  .trend-bar-inner { height:100%; border-radius:3px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+
+  /* Notification Toast */
+  #toast {
+    position:fixed; bottom:24px; right:24px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding:12px 18px;
+    border-radius:4px;
+    font-size:12px;
+    z-index:1000;
+    transform:translateX(200%);
+    transition:transform .3s ease;
+    max-width:260px;
+  }
+  #toast.show { transform:translateX(0); }
+  #toast.success { border-left-color:var(--green); }
+  #toast.error { border-left-color:var(--accent2); }
+
+  /* Responsive scrollable on small */
+  @media(max-width:1100px){
+    .main { grid-template-columns:280px 1fr; grid-template-rows:auto auto auto auto; }
+    .stats-panel { grid-column:1/3; grid-row:4; }
+    .race-section { grid-column:2; }
+    .results-section { grid-column:2; }
+    .betting-panel { grid-row:1/3; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Greyhound<span>Sprint</span>Pro™</div>
+  <div class="header-right">
+    <div class="wallet"><span>WALLET</span>$<span id="walletDisplay">1,250</span></div>
+    <div class="nav-btns">
+      <button class="nav-btn" onclick="showToast('Race history coming soon!','info')">Race History</button>
+      <button class="nav-btn" onclick="showRules()">Rules</button>
+      <button class="nav-btn" onclick="showToast('Settings coming soon!','info')">Settings</button>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- === BETTING PANEL === -->
+  <div class="panel betting-panel">
+    <div class="panel-title"><span class="dot"></span> SELECT DOG & BET</div>
+    <div class="dog-grid" id="dogGrid"></div>
+
+    <div class="bet-controls">
+      <div class="pool-info">
+        <span class="pool-label">TOTAL POOL</span>
+        <span class="pool-val" id="totalPool">$0</span>
+      </div>
+      <div class="bet-type-row" id="betTypeRow">
+        <button class="bet-type-btn active" data-type="win" onclick="selectBetType(this)">WIN</button>
+        <button class="bet-type-btn" data-type="place" onclick="selectBetType(this)">PLACE</button>
+        <button class="bet-type-btn" data-type="show" onclick="selectBetType(this)">SHOW</button>
+      </div>
+      <div>
+        <div class="bet-amount-row">
+          <span class="bet-amount-label">BET $</span>
+          <input type="number" class="bet-amount-input" id="betAmount" value="50" min="5" max="500" step="5">
+        </div>
+        <div class="quick-amounts" style="margin-top:6px;">
+          <button class="qa-btn" onclick="setAmount(10)">$10</button>
+          <button class="qa-btn" onclick="setAmount(25)">$25</button>
+          <button class="qa-btn" onclick="setAmount(50)">$50</button>
+          <button class="qa-btn" onclick="setAmount(100)">$100</button>
+          <button class="qa-btn" onclick="setAmount(200)">$200</button>
+        </div>
+      </div>
+      <button class="place-bet-btn" id="placeBetBtn" onclick="placeBet()">PLACE BET</button>
+    </div>
+
+    <div class="panel-title" style="margin-top:0;"><span class="dot" style="background:var(--accent3); box-shadow:0 0 8px var(--accent3)"></span> ACTIVE BETS</div>
+    <div class="active-bets" id="activeBets">
+      <div class="no-bets">No bets placed yet</div>
+    </div>
+  </div>
+
+  <!-- === RACE TRACK === -->
+  <div class="panel race-section">
+    <div class="panel-title"><span class="dot" style="background:var(--accent3);box-shadow:0 0 8px var(--accent3)"></span> RACE TRACK — SPRINT 400M</div>
+    <div class="track-area">
+      <div class="track-wrap" id="trackWrap">
+        <div class="finish-line"></div>
+        <div class="finish-flag">🏁</div>
+        <div id="lanes"></div>
+        <div class="countdown-overlay hidden" id="countdownOverlay">
+          <div class="countdown-num" id="countdownNum">3</div>
+        </div>
+      </div>
+    </div>
+    <div class="race-controls">
+      <div class="race-status idle" id="raceStatus">AWAITING BETS</div>
+      <div class="ctrl-btns">
+        <button class="ctrl-btn start" id="startBtn" onclick="startRace()">▶ START RACE</button>
+        <button class="ctrl-btn replay" id="replayBtn" onclick="replayRace()" style="display:none;">⟳ REPLAY</button>
+        <button class="ctrl-btn next" id="nextBtn" onclick="nextRace()" style="display:none;">NEXT RACE ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- === RESULTS === -->
+  <div class="panel results-section">
+    <div class="panel-title"><span class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span> RESULTS & PAYOUTS</div>
+    <div class="results-inner" id="resultsInner">
+      <div class="no-results">Race results will appear here</div>
+    </div>
+  </div>
+
+  <!-- === SIDEBAR === -->
+  <div class="panel stats-panel">
+    <div class="panel-title"><span class="dot"></span> STATS & HISTORY</div>
+    <div class="stats-inner">
+      <div class="stat-section">
+        <div class="stat-section-title">Recent Races</div>
+        <div id="raceHistory"><span style="color:var(--muted);font-size:11px;">No races yet</span></div>
+      </div>
+      <div class="stat-section">
+        <div class="stat-section-title">Dog Win Trends</div>
+        <div id="dogTrends"></div>
+      </div>
+      <div class="stat-section">
+        <div class="stat-section-title">Leaderboard</div>
+        <div id="leaderboard">
+          <div class="leaderboard-row"><span class="lb-pos">1</span><span class="lb-name">YOU</span><span class="lb-score" id="playerScore">$0</span></div>
+          <div class="leaderboard-row"><span class="lb-pos">2</span><span class="lb-name">SpeedRacer99</span><span class="lb-score">$840</span></div>
+          <div class="leaderboard-row"><span class="lb-pos">3</span><span class="lb-name">BetKing_X</span><span class="lb-score">$610</span></div>
+          <div class="leaderboard-row"><span class="lb-pos">4</span><span class="lb-name">GhostBet</span><span class="lb-score">$390</span></div>
+          <div class="leaderboard-row"><span class="lb-pos">5</span><span class="lb-name">DogWhisperer</span><span class="lb-score">$210</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ==================== STATE ====================
+const DOG_NAMES = ['Turbo Rex','Shadow Flash','Iron Paws','Bolt Storm','Neon Fang','Ghost Blitz'];
+const DOG_COLORS = ['#f5c518','#ff4d6d','#00e5ff','#00ff88','#ff9900','#b388ff'];
+const DOG_EMOJIS = ['🐕','🐩','🦮','🐶','🐕‍🦺','🐕'];
+const EVENTS = [
+  {name:'BOOST',icon:'⚡',mod:2.5,color:'#f5c518'},
+  {name:'SLIP',icon:'💦',mod:-2,color:'#00e5ff'},
+  {name:'FATIGUE',icon:'😮‍💨',mod:-1.5,color:'#ff4d6d'},
+  {name:'SURGE',icon:'🔥',mod:3,color:'#ff9900'}
+];
+
+let wallet = 1250;
+let playerScore = 0;
+let dogs = [];
+let selectedDog = null;
+let betType = 'win';
+let activeBets = [];
+let raceState = 'idle'; // idle | countdown | running | finished
+let raceResults = [];
+let raceCount = 0;
+let raceHistory = [];
+let animFrameId = null;
+let lastTimestamp = null;
+let dogPositions = [];
+let finishedOrder = [];
+let trackWidth = 0;
+
+// ==================== INIT ====================
+function initDogs() {
+  dogs = DOG_NAMES.map((name, i) => ({
+    id: i,
+    name,
+    color: DOG_COLORS[i],
+    emoji: DOG_EMOJIS[i],
+    speed: 10 + Math.random() * 5,
+    stamina: 50 + Math.floor(Math.random() * 50),
+    wins: 0,
+    races: 0,
+    odds: 0
+  }));
+  recalcOdds();
+  renderDogGrid();
+  renderLanes();
+  renderTrends();
+}
+
+function recalcOdds() {
+  // Odds inversely proportional to speed + stamina/20
+  dogs.forEach(d => {
+    const power = d.speed + d.stamina / 20;
+    d.odds = Math.max(1.5, Math.min(10, (100 / power)).toFixed(1));
+  });
+}
+
+// ==================== RENDER DOG GRID ====================
+function renderDogGrid() {
+  const grid = document.getElementById('dogGrid');
+  grid.innerHTML = dogs.map((d,i) => `
+    <div class="dog-card ${selectedDog === i ? 'selected':''}" onclick="selectDog(${i})" id="dogCard${i}">
+      <div class="dog-card-header">
+        <div class="dog-num" style="background:${d.color}22;color:${d.color}">${i+1}</div>
+        <span class="dog-name">${d.name}</span>
+        <div>
+          <span class="dog-odds" style="color:${d.color}">${d.odds}:1</span>
+          <span class="dog-odds-label">ODDS</span>
+        </div>
+      </div>
+      <div class="stat-bar-wrap">
+        <span class="stat-label">SPEED</span>
+        <div class="stat-bar"><div class="stat-fill speed" style="width:${(d.speed/15)*100}%"></div></div>
+        <span class="stat-val">${d.speed.toFixed(0)}</span>
+      </div>
+      <div class="stat-bar-wrap" style="margin-top:4px">
+        <span class="stat-label">STAMINA</span>
+        <div class="stat-bar"><div class="stat-fill stamina" style="width:${d.stamina}%"></div></div>
+        <span class="stat-val">${d.stamina}</span>
+      </div>
+    </div>
+  `).join('');
+  updatePool();
+}
+
+function selectDog(i) {
+  if (raceState !== 'idle') return;
+  selectedDog = i;
+  renderDogGrid();
+}
+
+function selectBetType(btn) {
+  document.querySelectorAll('.bet-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  betType = btn.dataset.type;
+}
+
+function setAmount(n) {
+  document.getElementById('betAmount').value = n;
+}
+
+function updatePool() {
+  const total = activeBets.reduce((s,b)=>s+b.amount,0);
+  document.getElementById('totalPool').textContent = '$' + total.toLocaleString();
+}
+
+// ==================== PLACE BET ====================
+function placeBet() {
+  if (raceState !== 'idle') { showToast('Race in progress!','error'); return; }
+  if (selectedDog === null) { showToast('Select a dog first!','error'); return; }
+  const amt = parseInt(document.getElementById('betAmount').value);
+  if (isNaN(amt) || amt < 5) { showToast('Min bet is $5','error'); return; }
+  if (amt > wallet) { showToast('Insufficient funds!','error'); return; }
+
+  wallet -= amt;
+  updateWallet();
+
+  activeBets.push({ dogId: selectedDog, type: betType, amount: amt });
+  renderActiveBets();
+  updatePool();
+  showToast(`Bet placed: ${dogs[selectedDog].name} — ${betType.toUpperCase()} $${amt}`,'success');
+}
+
+function renderActiveBets() {
+  const el = document.getElementById('activeBets');
+  if (!activeBets.length) { el.innerHTML='<div class="no-bets">No bets placed yet</div>'; return; }
+  el.innerHTML = activeBets.map((b,i)=>`
+    <div class="bet-chip">
+      <span class="dog-tag" style="color:${dogs[b.dogId].color}">#${b.dogId+1} ${dogs[b.dogId].name}</span>
+      <span class="bet-tag">${b.type.toUpperCase()}</span>
+      <span class="amt-tag">$${b.amount}</span>
+      <button class="remove-btn" onclick="removeBet(${i})" ${raceState!=='idle'?'disabled':''}>✕</button>
+    </div>
+  `).join('');
+}
+
+function removeBet(i) {
+  if (raceState !== 'idle') return;
+  wallet += activeBets[i].amount;
+  updateWallet();
+  activeBets.splice(i,1);
+  renderActiveBets();
+  updatePool();
+}
+
+function updateWallet() {
+  document.getElementById('walletDisplay').textContent = wallet.toLocaleString();
+}
+
+// ==================== LANES ====================
+function renderLanes() {
+  const lanes = document.getElementById('lanes');
+  lanes.innerHTML = dogs.map((d,i)=>`
+    <div class="lane" id="lane${i}">
+      <div class="lane-dots"></div>
+      <div class="lane-num">${i+1}</div>
+      <div class="lane-inner" id="laneInner${i}">
+        <div class="dog-runner" id="runner${i}" style="left:0%">
+          <span class="dog-emoji">${d.emoji}</span>
+          <span class="dog-runner-name" style="color:${d.color}">${d.name.split(' ')[0]}</span>
+          <span class="event-badge" id="eventBadge${i}"></span>
+        </div>
+      </div>
+      <div class="dog-rank-badge" id="rankBadge${i}"></div>
+    </div>
+  `).join('');
+}
+
+// ==================== RACE ====================
+function startRace() {
+  if (raceState !== 'idle') return;
+  if (!activeBets.length) { showToast('Place at least one bet!','error'); return; }
+  
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('replayBtn').style.display='none';
+  document.getElementById('nextBtn').style.display='none';
+
+  // Reset
+  finishedOrder = [];
+  dogPositions = dogs.map(()=>0);
+  renderLanes();
+
+  // Countdown
+  raceState = 'countdown';
+  const overlay = document.getElementById('countdownOverlay');
+  const numEl = document.getElementById('countdownNum');
+  overlay.classList.remove('hidden');
+  let count = 3;
+  numEl.textContent = count;
+  setRaceStatus('GET READY', 'betting');
+
+  const countInterval = setInterval(()=>{
+    count--;
+    if (count > 0) {
+      numEl.textContent = count;
+      numEl.style.animation='none';
+      void numEl.offsetWidth;
+      numEl.style.animation='countZoom .8s ease';
+    } else {
+      clearInterval(countInterval);
+      numEl.textContent = 'GO!';
+      numEl.style.color = 'var(--green)';
+      numEl.style.textShadow = '0 0 60px rgba(0,255,136,0.8)';
+      setTimeout(()=>{
+        overlay.classList.add('hidden');
+        beginRace();
+      }, 600);
+    }
+  }, 900);
+}
+
+function beginRace() {
+  raceState = 'running';
+  setRaceStatus('RACING...','running');
+
+  // Assign dog speeds with stamina & random
+  const raceStats = dogs.map(d => ({
+    speed: d.speed + (Math.random()*2-1) + d.stamina*0.03,
+    stamina: d.stamina,
+    modifier: 0,
+    eventTimer: 2000 + Math.random()*3000,
+    eventCooldown: 0
+  }));
+
+  // Get track width for calculation
+  const trackEl = document.getElementById('laneInner0');
+  if (trackEl) trackWidth = trackEl.offsetWidth;
+
+  lastTimestamp = null;
+  function frame(ts) {
+    if (!lastTimestamp) lastTimestamp = ts;
+    const dt = (ts - lastTimestamp) / 1000;
+    lastTimestamp = ts;
+
+    let allFinished = finishedOrder.length >= dogs.length;
+    if (allFinished) { endRace(); return; }
+
+    dogs.forEach((d,i) => {
+      if (finishedOrder.includes(i)) return;
+
+      // Random stamina events
+      raceStats[i].eventTimer -= dt*1000;
+      if (raceStats[i].eventTimer <= 0 && raceStats[i].eventCooldown <= 0) {
+        const ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+        raceStats[i].modifier = ev.mod;
+        raceStats[i].eventCooldown = 2000;
+        raceStats[i].eventTimer = 3000 + Math.random()*4000;
+
+        const badge = document.getElementById('eventBadge'+i);
+        if (badge) { badge.textContent = ev.icon; setTimeout(()=>badge.textContent='',1500); }
+      }
+      if (raceStats[i].eventCooldown > 0) {
+        raceStats[i].eventCooldown -= dt*1000;
+        if (raceStats[i].eventCooldown <= 0) raceStats[i].modifier = 0;
+      }
+
+      const speed = raceStats[i].speed + raceStats[i].modifier;
+      dogPositions[i] += speed * dt * 8;
+
+      // percent of track (0-100)
+      const pct = Math.min(dogPositions[i], 95);
+
+      const runner = document.getElementById('runner'+i);
+      if (runner) runner.style.left = pct + '%';
+
+      if (dogPositions[i] >= 95 && !finishedOrder.includes(i)) {
+        finishedOrder.push(i);
+        const pos = finishedOrder.length;
+        const badge = document.getElementById('rankBadge'+i);
+        if (badge) {
+          badge.textContent = ['🥇','🥈','🥉','4th','5th','6th'][pos-1];
+          badge.classList.add('visible');
+        }
+        // update dog wins
+        dogs[i].races++;
+        if (pos === 1) dogs[i].wins++;
+      }
+    });
+
+    animFrameId = requestAnimationFrame(frame);
+  }
+  animFrameId = requestAnimationFrame(frame);
+}
+
+function endRace() {
+  raceState = 'finished';
+  raceCount++;
+  setRaceStatus('FINISHED!','finished');
+
+  // Build final order (dogs that haven't crossed get appended)
+  const remaining = dogs.map((_,i)=>i).filter(i=>!finishedOrder.includes(i));
+  // Sort remaining by position
+  remaining.sort((a,b)=>dogPositions[b]-dogPositions[a]);
+  const fullOrder = [...finishedOrder, ...remaining];
+  raceResults = fullOrder;
+
+  // History
+  raceHistory.unshift({race: raceCount, winner: dogs[fullOrder[0]].name, time: (2.8+Math.random()*0.8).toFixed(2)+'s'});
+  if (raceHistory.length > 6) raceHistory.pop();
+
+  // Calculate payouts
+  const totalPool = activeBets.reduce((s,b)=>s+b.amount,0);
+  const winPool = totalPool * 0.5;
+  const placePool = totalPool * 0.3;
+  const showPool = totalPool * 0.2;
+
+  let totalPayout = 0;
+  const betResults = activeBets.map(b => {
+    const pos = raceResults.indexOf(b.dogId);
+    let won = false;
+    let payout = 0;
+    if (b.type === 'win' && pos === 0) won = true;
+    if (b.type === 'place' && pos <= 1) won = true;
+    if (b.type === 'show' && pos <= 2) won = true;
+
+    if (won) {
+      // Simplified payout using odds
+      const odds = parseFloat(dogs[b.dogId].odds);
+      payout = Math.floor(b.amount * (odds * 0.8 + 1));
+      wallet += payout;
+      playerScore += (payout - b.amount);
+      totalPayout += payout;
+    }
+    return { ...b, won, payout, pos };
+  });
+
+  updateWallet();
+  renderResults(raceResults, betResults);
+  renderHistory();
+  renderTrends();
+  recalcOdds();
+  renderDogGrid();
+  document.getElementById('playerScore').textContent = '$' + Math.max(0,playerScore).toLocaleString();
+
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('replayBtn').style.display='inline-block';
+  document.getElementById('nextBtn').style.display='inline-block';
+
+  if (totalPayout > 0) {
+    showToast(`🎉 You won $${totalPayout}!`, 'success');
+  } else {
+    showToast('Better luck next race!','error');
+  }
+}
+
+function renderResults(order, betResults) {
+  const el = document.getElementById('resultsInner');
+  const medals = ['🥇','🥈','🥉'];
+  const podium = order.slice(0,3).map((id,i)=>`
+    <div class="podium-spot">
+      <div class="podium-rank">${medals[i]}</div>
+      <div class="podium-name" style="color:${dogs[id].color}">${dogs[id].name}</div>
+      <div class="podium-time">${(2.8+Math.random()*0.5).toFixed(2)}s</div>
+    </div>
+  `).join('');
+
+  const betRows = betResults.map(b=>`
+    <div class="bet-result-row ${b.won?'win':'loss'}">
+      <div class="result-left">
+        <span class="result-icon">${b.won?'✅':'❌'}</span>
+        <span class="result-desc">${b.type.toUpperCase()} — ${dogs[b.dogId].name}<br><span style="color:var(--muted);font-size:10px;">Finished ${b.pos+1}${['st','nd','rd','th','th','th'][b.pos]}</span></span>
+      </div>
+      <span class="result-payout ${b.won?'':'loss'}">${b.won ? '+$'+b.payout : '-$'+b.amount}</span>
+    </div>
+  `).join('');
+
+  el.innerHTML = `<div class="podium">${podium}</div><div class="bet-results">${betRows||'<div class="no-results">No bets were placed</div>'}</div>`;
+}
+
+function renderHistory() {
+  const el = document.getElementById('raceHistory');
+  if (!raceHistory.length) { el.innerHTML='<span style="color:var(--muted);font-size:11px;">No races yet</span>'; return; }
+  el.innerHTML = raceHistory.map(r=>`
+    <div class="history-item">
+      <span class="history-race">Race #${r.race}</span>
+      <span class="history-winner">${r.winner.split(' ')[0]}</span>
+      <span style="color:var(--muted);font-size:10px;">${r.time}</span>
+    </div>
+  `).join('');
+}
+
+function renderTrends() {
+  const el = document.getElementById('dogTrends');
+  const maxWins = Math.max(...dogs.map(d=>d.wins), 1);
+  el.innerHTML = dogs.map(d=>`
+    <div class="trend-row">
+      <span class="trend-name" style="color:${d.color}">${d.name.split(' ')[0]}</span>
+      <div class="trend-bar-outer"><div class="trend-bar-inner" style="width:${(d.wins/maxWins)*100}%;background:${d.color}"></div></div>
+      <span class="trend-wins" style="color:${d.color}">${d.wins}W</span>
+    </div>
+  `).join('');
+}
+
+function replayRace() {
+  // Re-animate with stored results
+  dogPositions = dogs.map(()=>0);
+  finishedOrder = [];
+  renderLanes();
+  raceState = 'running';
+  setRaceStatus('REPLAY','running');
+  beginRace();
+}
+
+function nextRace() {
+  activeBets = [];
+  raceState = 'idle';
+  raceResults = [];
+  dogPositions = dogs.map(()=>0);
+  finishedOrder = [];
+  // Randomize speeds a bit
+  dogs.forEach(d => {
+    d.speed = 10 + Math.random()*5;
+    d.stamina = 50 + Math.floor(Math.random()*50);
+  });
+  recalcOdds();
+  renderDogGrid();
+  renderLanes();
+  renderActiveBets();
+  document.getElementById('replayBtn').style.display='none';
+  document.getElementById('nextBtn').style.display='none';
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('resultsInner').innerHTML='<div class="no-results">Race results will appear here</div>';
+  setRaceStatus('AWAITING BETS','idle');
+  showToast(`Race #${raceCount+1} — Place your bets!`,'info');
+}
+
+function setRaceStatus(text, cls) {
+  const el = document.getElementById('raceStatus');
+  el.textContent = text;
+  el.className = 'race-status ' + cls;
+}
+
+// ==================== TOAST ====================
+let toastTimer;
+function showToast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.className='',3000);
+}
+
+function showRules() {
+  const r = `WIN: Dog finishes 1st\nPLACE: Dog finishes 1st or 2nd\nSHOW: Dog finishes 1st, 2nd, or 3rd\n\nPayouts based on odds × bet amount.\nStamina events randomly affect speed during race.`;
+  alert(r);
+}
+
+// ==================== START ====================
+initDogs();
+</script>
+</body>
+</html>
