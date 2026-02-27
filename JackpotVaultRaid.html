@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JackpotVaultRaid — Crack the Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0a0d1a;
+    --dark: #060810;
+    --steel: #1c2235;
+    --chrome: #8a9bb5;
+    --gold: #c9a227;
+    --gold-light: #f0c845;
+    --gold-glow: rgba(201,162,39,0.4);
+    --blue-glow: rgba(64,160,255,0.5);
+    --electric: #40a0ff;
+    --red: #ff3a3a;
+    --green: #39ff7a;
+    --white: #e8edf5;
+    --dim: #4a5568;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: default;
+    background-image: 
+      radial-gradient(ellipse at 50% 0%, rgba(64,100,180,0.15) 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px);
+  }
+
+  /* ══ NOISE OVERLAY ══ */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.5;
+  }
+
+  /* ══ JACKPOT HUD ══ */
+  #jackpot-hud {
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    padding: 14px 20px; position: relative;
+    background: linear-gradient(180deg, rgba(10,13,26,0.9) 0%, rgba(6,8,16,0.95) 100%);
+    border-bottom: 1px solid rgba(201,162,39,0.2);
+  }
+  #jackpot-hud::before {
+    content: ''; position: absolute; bottom: 0; left: 10%; right: 10%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .jp-tier {
+    display: flex; flex-direction: column; align-items: center; padding: 8px 18px;
+    background: linear-gradient(135deg, rgba(28,34,53,0.8), rgba(10,13,26,0.9));
+    border: 1px solid rgba(138,155,181,0.15);
+    border-radius: 4px; position: relative; min-width: 100px;
+    transition: all 0.3s;
+  }
+  .jp-tier::before {
+    content: ''; position: absolute; inset: 0; border-radius: 4px;
+    background: linear-gradient(135deg, rgba(201,162,39,0.05), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .jp-tier.active::before { opacity: 1; }
+  .jp-tier.active { border-color: rgba(201,162,39,0.5); box-shadow: 0 0 20px rgba(201,162,39,0.2); }
+  .jp-tier.ultra { border-color: rgba(64,160,255,0.3); }
+  .jp-tier.ultra .jp-value { color: var(--electric); }
+
+  .jp-label {
+    font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 2px;
+    color: var(--chrome); text-transform: uppercase;
+  }
+  .jp-value {
+    font-family: 'Share Tech Mono', monospace; font-size: 18px;
+    color: var(--gold-light); font-weight: bold;
+    text-shadow: 0 0 12px var(--gold-glow);
+  }
+  .jp-tier.ultra .jp-label { color: var(--electric); letter-spacing: 3px; }
+
+  /* ══ MAIN WRAPPER ══ */
+  #game-wrap {
+    max-width: 900px; margin: 0 auto; padding: 24px 16px 32px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* ══ TITLE ══ */
+  .game-title {
+    text-align: center; font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px; letter-spacing: 6px;
+    background: linear-gradient(135deg, var(--chrome) 0%, var(--gold-light) 40%, var(--chrome) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(201,162,39,0.3));
+    line-height: 1;
+  }
+  .game-subtitle {
+    text-align: center; font-size: 12px; letter-spacing: 5px; color: var(--dim);
+    text-transform: uppercase; margin-top: 2px;
+  }
+
+  /* ══ VAULT BREACH METER ══ */
+  .breach-wrap {
+    display: flex; align-items: center; gap: 12px; padding: 0 4px;
+  }
+  .breach-label {
+    font-size: 11px; letter-spacing: 3px; color: var(--chrome);
+    text-transform: uppercase; white-space: nowrap; min-width: 100px;
+  }
+  .breach-bar-bg {
+    flex: 1; height: 8px; background: rgba(28,34,53,0.8);
+    border: 1px solid rgba(138,155,181,0.15); border-radius: 4px; overflow: hidden;
+    position: relative;
+  }
+  .breach-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--electric), var(--gold-light));
+    border-radius: 4px; transition: width 0.6s cubic-bezier(0.23,1,0.32,1);
+    box-shadow: 0 0 8px var(--blue-glow);
+    position: relative;
+  }
+  .breach-bar-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 4px;
+    background: white; opacity: 0.8; border-radius: 2px;
+    animation: pulse-tip 1s ease-in-out infinite;
+  }
+  @keyframes pulse-tip { 0%,100% { opacity: 0.8; } 50% { opacity: 0.2; } }
+  .breach-pct {
+    font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--electric);
+    min-width: 36px; text-align: right;
+  }
+
+  /* ══ SLOT MACHINE FRAME ══ */
+  #slot-machine {
+    background: linear-gradient(180deg, #0f1525 0%, #0a0d1a 100%);
+    border: 1px solid rgba(138,155,181,0.12);
+    border-radius: 8px; padding: 20px;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
+    position: relative; overflow: hidden;
+  }
+  #slot-machine::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,162,39,0.4), transparent);
+  }
+
+  /* Corner bolts */
+  .bolt {
+    position: absolute; width: 12px; height: 12px;
+    border: 1px solid rgba(138,155,181,0.3); border-radius: 50%;
+    background: radial-gradient(circle, #2a3348, #1c2235);
+  }
+  .bolt::after {
+    content: '+'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); font-size: 8px; color: var(--dim);
+  }
+  .bolt.tl { top: 8px; left: 8px; }
+  .bolt.tr { top: 8px; right: 8px; }
+  .bolt.bl { bottom: 8px; left: 8px; }
+  .bolt.br { bottom: 8px; right: 8px; }
+
+  /* ══ REEL AREA ══ */
+  #reel-area {
+    display: flex; gap: 6px; margin-bottom: 16px;
+    background: rgba(6,8,16,0.6); border-radius: 6px; padding: 12px;
+    border: 1px solid rgba(138,155,181,0.08);
+    box-shadow: inset 0 4px 20px rgba(0,0,0,0.6);
+  }
+
+  .reel {
+    flex: 1; display: flex; flex-direction: column; gap: 4px;
+    position: relative;
+  }
+  .reel::before, .reel::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 30px; z-index: 2;
+    pointer-events: none;
+  }
+  .reel::before { top: 0; background: linear-gradient(180deg, rgba(6,8,16,0.9), transparent); }
+  .reel::after { bottom: 0; background: linear-gradient(0deg, rgba(6,8,16,0.9), transparent); }
+
+  .reel-cell {
+    height: 72px; display: flex; align-items: center; justify-content: center;
+    font-size: 36px; background: rgba(10,13,26,0.7); border-radius: 4px;
+    border: 1px solid rgba(138,155,181,0.08);
+    transition: transform 0.1s; position: relative; overflow: hidden;
+    user-select: none;
+  }
+  .reel-cell.win {
+    background: rgba(201,162,39,0.12);
+    border-color: rgba(201,162,39,0.5);
+    box-shadow: 0 0 16px rgba(201,162,39,0.3);
+    animation: win-pulse 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes win-pulse {
+    from { box-shadow: 0 0 8px rgba(201,162,39,0.2); }
+    to { box-shadow: 0 0 24px rgba(201,162,39,0.5); }
+  }
+  .reel-cell.spinning {
+    animation: spin-blur 0.08s linear infinite;
+  }
+  @keyframes spin-blur {
+    0% { transform: translateY(-4px); opacity: 0.7; }
+    50% { transform: translateY(4px); opacity: 1; }
+    100% { transform: translateY(-4px); opacity: 0.7; }
+  }
+
+  /* Payline center highlight */
+  #reel-area::after {
+    content: ''; position: absolute; left: 12px; right: 12px;
+    top: calc(50% - 1px); height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(201,162,39,0.2), transparent);
+    pointer-events: none;
+  }
+
+  /* ══ WIN DISPLAY ══ */
+  #win-display {
+    text-align: center; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 4px;
+    color: var(--gold-light); text-shadow: 0 0 20px var(--gold-glow);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  #win-display.show { opacity: 1; }
+
+  /* ══ CONTROL PANEL ══ */
+  #control-panel {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;
+    padding-top: 12px;
+  }
+
+  .ctrl-left, .ctrl-right {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .ctrl-right { align-items: flex-end; }
+
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-label {
+    font-size: 10px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase;
+  }
+  .ctrl-val {
+    font-family: 'Share Tech Mono', monospace; font-size: 16px; color: var(--white);
+    background: rgba(6,8,16,0.6); border: 1px solid rgba(138,155,181,0.15);
+    border-radius: 3px; padding: 4px 10px; min-width: 60px; text-align: center;
+  }
+
+  .btn-sm {
+    background: rgba(28,34,53,0.8); border: 1px solid rgba(138,155,181,0.2);
+    color: var(--chrome); font-family: 'Rajdhani', sans-serif; font-size: 13px;
+    font-weight: 600; letter-spacing: 1px; padding: 5px 10px; border-radius: 3px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-sm:hover { background: rgba(64,100,180,0.2); border-color: var(--electric); color: var(--white); }
+  .btn-sm:active { transform: scale(0.96); }
+  .btn-sm.active { background: rgba(201,162,39,0.15); border-color: var(--gold); color: var(--gold-light); }
+
+  /* ══ SPIN BUTTON ══ */
+  #spin-btn {
+    width: 100px; height: 100px; border-radius: 50%; cursor: pointer;
+    background: radial-gradient(circle at 40% 30%, #2a3a5a, #0f1a30);
+    border: 3px solid rgba(201,162,39,0.6);
+    box-shadow: 0 0 30px rgba(201,162,39,0.2), 0 0 60px rgba(0,0,0,0.6), inset 0 2px 6px rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; position: relative; overflow: hidden; transition: all 0.2s;
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 3px;
+    color: var(--gold-light);
+  }
+  #spin-btn::before {
+    content: ''; position: absolute; inset: -3px; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0%, var(--gold) 30%, transparent 60%, var(--gold) 90%, transparent 100%);
+    animation: spin-ring 3s linear infinite;
+    z-index: -1; opacity: 0.4;
+  }
+  @keyframes spin-ring { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+  #spin-btn:hover {
+    transform: scale(1.04);
+    box-shadow: 0 0 40px rgba(201,162,39,0.4), inset 0 2px 6px rgba(255,255,255,0.15);
+  }
+  #spin-btn:active { transform: scale(0.97); }
+  #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  #spin-btn .spin-sub { font-size: 9px; letter-spacing: 3px; color: var(--chrome); font-family: 'Rajdhani'; }
+
+  /* ══ BALANCE BAR ══ */
+  #balance-bar {
+    display: flex; justify-content: center; gap: 32px; align-items: center;
+    padding: 10px 20px;
+    background: rgba(10,13,26,0.6); border-radius: 4px;
+    border: 1px solid rgba(138,155,181,0.08);
+  }
+  .bal-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .bal-label { font-size: 9px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; }
+  .bal-val {
+    font-family: 'Share Tech Mono', monospace; font-size: 18px; color: var(--white);
+    text-shadow: 0 0 8px rgba(255,255,255,0.1);
+  }
+  #win-val { color: var(--gold-light); text-shadow: 0 0 12px var(--gold-glow); }
+
+  /* ══ VAULT OVERLAY ══ */
+  #vault-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.92);
+    align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  #vault-overlay.show { display: flex; }
+
+  /* ══ VAULT DOOR ══ */
+  #vault-door-wrap {
+    position: relative; width: 280px; height: 280px; margin-bottom: 32px;
+  }
+
+  .vault-outer {
+    width: 280px; height: 280px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 30%, #3a4560, #1c2235, #0a0d1a);
+    border: 8px solid #2a3348;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 120px rgba(64,160,255,0.1), inset 0 4px 12px rgba(255,255,255,0.05);
+    position: relative; display: flex; align-items: center; justify-content: center;
+    animation: vault-door-open 1.5s 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+    transform-origin: left center;
+  }
+  @keyframes vault-door-open {
+    0% { transform: rotateY(0deg) translateX(0); }
+    100% { transform: rotateY(-75deg) translateX(-30px); opacity: 0.3; }
+  }
+
+  .vault-inner-ring {
+    width: 220px; height: 220px; border-radius: 50%;
+    border: 4px solid #1c2235;
+    background: radial-gradient(circle at 40% 35%, #2a3550, #0f1525);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .vault-spokes {
+    position: absolute; inset: 0;
+  }
+  .vault-spoke {
+    position: absolute; top: 50%; left: 50%;
+    width: 2px; height: 90px; margin-left: -1px; margin-top: -90px;
+    background: linear-gradient(180deg, transparent, #2a3550, #3a4560);
+    transform-origin: bottom center;
+    border-radius: 1px;
+  }
+  .vault-handle {
+    width: 60px; height: 20px; background: linear-gradient(180deg, #4a5a70, #2a3a50);
+    border-radius: 10px; border: 2px solid #5a6a80;
+    position: absolute;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+
+  .vault-glow-reveal {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,162,39,0.4), transparent 70%);
+    animation: vault-glow-in 0.5s 1.8s ease-out forwards;
+    opacity: 0;
+  }
+  @keyframes vault-glow-in {
+    0% { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 1; transform: scale(1.2); }
+  }
+
+  #vault-opening-text {
+    font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 8px;
+    color: var(--gold-light); text-align: center;
+    animation: vault-text-in 0.6s 2s ease-out both;
+    text-shadow: 0 0 40px var(--gold-glow);
+  }
+  @keyframes vault-text-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #vault-sub-text {
+    font-size: 13px; letter-spacing: 4px; color: var(--chrome); text-transform: uppercase;
+    margin-top: 8px; animation: vault-text-in 0.6s 2.3s ease-out both;
+  }
+
+  /* ══ BONUS BOARD OVERLAY ══ */
+  #bonus-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.97);
+    flex-direction: column; align-items: center;
+    padding: 20px 16px; overflow-y: auto;
+  }
+  #bonus-overlay.show { display: flex; }
+
+  .bonus-hud {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; max-width: 700px; margin-bottom: 16px;
+  }
+  .vault-level-badge {
+    font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px;
+  }
+  .level-bronze { color: #cd7f32; text-shadow: 0 0 20px rgba(205,127,50,0.5); }
+  .level-silver { color: #c0c0c0; text-shadow: 0 0 20px rgba(192,192,192,0.5); }
+  .level-gold { color: var(--gold-light); text-shadow: 0 0 20px var(--gold-glow); }
+  .level-diamond { color: var(--electric); text-shadow: 0 0 20px var(--blue-glow); }
+  .level-black { color: #cc44ff; text-shadow: 0 0 20px rgba(204,68,255,0.5); }
+
+  .respin-display {
+    font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px;
+    color: var(--white);
+  }
+  .respin-display span { color: var(--gold-light); font-size: 32px; }
+
+  .bonus-winnings {
+    font-family: 'Share Tech Mono', monospace; font-size: 20px; color: var(--gold-light);
+    text-shadow: 0 0 12px var(--gold-glow);
+  }
+
+  /* Key tracker */
+  .key-tracker {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 12px;
+  }
+  .key-pip {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(201,162,39,0.4);
+    background: rgba(10,13,26,0.8);
+    transition: all 0.3s;
+    font-size: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .key-pip.filled {
+    background: rgba(201,162,39,0.3); border-color: var(--gold-light);
+    box-shadow: 0 0 10px var(--gold-glow);
+  }
+  .key-label { font-size: 11px; letter-spacing: 3px; color: var(--chrome); text-transform: uppercase; }
+
+  /* Bonus board */
+  #bonus-board {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+    width: 100%; max-width: 700px; margin-bottom: 16px;
+  }
+
+  .board-cell {
+    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; border-radius: 6px; border: 1px solid rgba(138,155,181,0.15);
+    background: linear-gradient(135deg, rgba(28,34,53,0.8), rgba(10,13,26,0.9));
+    cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;
+    min-height: 80px;
+  }
+  .board-cell:not(.revealed):hover {
+    border-color: rgba(201,162,39,0.5); background: rgba(28,34,53,1);
+    box-shadow: 0 0 15px rgba(201,162,39,0.15);
+  }
+  .board-cell.revealed { cursor: default; }
+  .board-cell.cash { background: linear-gradient(135deg, rgba(57,255,122,0.1), rgba(10,13,26,0.9)); border-color: rgba(57,255,122,0.3); }
+  .board-cell.multiplier { background: linear-gradient(135deg, rgba(201,162,39,0.1), rgba(10,13,26,0.9)); border-color: rgba(201,162,39,0.4); }
+  .board-cell.key-cell { background: linear-gradient(135deg, rgba(64,160,255,0.1), rgba(10,13,26,0.9)); border-color: rgba(64,160,255,0.4); }
+  .board-cell.bomb { background: linear-gradient(135deg, rgba(255,58,58,0.15), rgba(10,13,26,0.9)); border-color: rgba(255,58,58,0.4); }
+  .board-cell.jackpot { background: linear-gradient(135deg, rgba(204,68,255,0.15), rgba(10,13,26,0.9)); border-color: rgba(204,68,255,0.5); }
+  .board-cell.locked {
+    background: repeating-linear-gradient(45deg, rgba(28,34,53,0.5) 0px, rgba(28,34,53,0.5) 4px, rgba(10,13,26,0.5) 4px, rgba(10,13,26,0.5) 8px);
+    opacity: 0.6; cursor: default;
+  }
+
+  .board-cell .cell-icon { font-size: 22px; }
+  .board-cell .cell-val {
+    font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: bold;
+    margin-top: 2px;
+  }
+  .board-cell.cash .cell-val { color: var(--green); }
+  .board-cell.multiplier .cell-val { color: var(--gold-light); }
+  .board-cell.key-cell .cell-val { color: var(--electric); }
+  .board-cell.bomb .cell-val { color: var(--red); }
+  .board-cell.jackpot .cell-val { color: #cc44ff; font-size: 11px; }
+
+  .board-cell .hidden-mark { font-size: 28px; opacity: 0.2; }
+
+  /* Bonus actions */
+  #bonus-actions {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    width: 100%; max-width: 700px;
+  }
+
+  .btn-cashout {
+    padding: 14px 32px; font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 3px; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(135deg, rgba(57,255,122,0.15), rgba(10,13,26,0.9));
+    border: 2px solid rgba(57,255,122,0.5); color: var(--green);
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(57,255,122,0.1);
+  }
+  .btn-cashout:hover { background: rgba(57,255,122,0.2); box-shadow: 0 0 30px rgba(57,255,122,0.25); }
+
+  .btn-risk {
+    padding: 14px 32px; font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 3px; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(135deg, rgba(255,58,58,0.15), rgba(10,13,26,0.9));
+    border: 2px solid rgba(255,58,58,0.5); color: var(--red);
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(255,58,58,0.1);
+  }
+  .btn-risk:hover { background: rgba(255,58,58,0.2); box-shadow: 0 0 30px rgba(255,58,58,0.25); }
+  .btn-risk:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ══ POPUP MESSAGES ══ */
+  #popup {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 9000; pointer-events: none;
+    font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 6px;
+    text-align: center; opacity: 0;
+  }
+  #popup.show {
+    animation: popup-anim 1.8s ease-out forwards;
+  }
+  @keyframes popup-anim {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    40% { transform: translate(-50%, -50%) scale(1); }
+    70% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -60%); }
+  }
+  .popup-gold { color: var(--gold-light); text-shadow: 0 0 40px var(--gold-glow); }
+  .popup-red { color: var(--red); text-shadow: 0 0 40px rgba(255,58,58,0.5); }
+  .popup-blue { color: var(--electric); text-shadow: 0 0 40px var(--blue-glow); }
+
+  /* ══ CAMERA SHAKE ══ */
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    10% { transform: translateX(-6px) rotate(-0.5deg); }
+    20% { transform: translateX(6px) rotate(0.5deg); }
+    30% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    50% { transform: translateX(-2px); }
+    60% { transform: translateX(2px); }
+  }
+  .shake { animation: shake 0.5s ease-out; }
+
+  /* ══ PARTICLES ══ */
+  .particle {
+    position: fixed; pointer-events: none; z-index: 9998;
+    border-radius: 50%; animation: particle-fly 1.2s ease-out forwards;
+  }
+  @keyframes particle-fly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+  }
+
+  /* ══ ALARM OVERLAY ══ */
+  #alarm-overlay {
+    position: fixed; inset: 0; z-index: 50; pointer-events: none;
+    background: rgba(255,50,50,0.0); border: 4px solid transparent;
+    display: none;
+  }
+  #alarm-overlay.alarm-on {
+    display: block;
+    animation: alarm-flash 0.3s linear infinite;
+    border-color: rgba(255,50,50,0.5);
+  }
+  @keyframes alarm-flash {
+    0%,100% { background: rgba(255,50,50,0.0); }
+    50% { background: rgba(255,50,50,0.04); }
+  }
+
+  /* ══ TURBO TOGGLE ══ */
+  .toggle-wrap { display: flex; align-items: center; gap: 6px; }
+  .toggle {
+    width: 36px; height: 18px; background: rgba(28,34,53,0.8);
+    border: 1px solid rgba(138,155,181,0.2); border-radius: 9px;
+    position: relative; cursor: pointer; transition: background 0.2s;
+  }
+  .toggle.on { background: rgba(201,162,39,0.3); border-color: var(--gold); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--dim); transition: all 0.2s;
+  }
+  .toggle.on::after { left: 20px; background: var(--gold-light); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(138,155,181,0.2); border-radius: 2px; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .jp-tier { min-width: 70px; padding: 6px 10px; }
+    .jp-value { font-size: 14px; }
+    .reel-cell { height: 56px; font-size: 28px; }
+    #spin-btn { width: 80px; height: 80px; font-size: 16px; }
+    .board-cell { min-height: 60px; }
+    .board-cell .cell-icon { font-size: 16px; }
+    .game-title { font-size: 28px; }
+  }
+
+  /* Jackpot animation */
+  @keyframes jackpot-celebration {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.05) rotate(-1deg); }
+    50% { transform: scale(1.05) rotate(1deg); }
+    75% { transform: scale(1.02) rotate(-0.5deg); }
+    100% { transform: scale(1); }
+  }
+  .jackpot-win { animation: jackpot-celebration 0.4s ease-in-out 5; }
+
+  /* Level up animation */
+  @keyframes level-up {
+    0%,100% { text-shadow: 0 0 20px var(--gold-glow); }
+    50% { text-shadow: 0 0 60px var(--gold-glow), 0 0 100px rgba(201,162,39,0.3); }
+  }
+  .level-up-anim { animation: level-up 0.5s ease-in-out 3; }
+</style>
+</head>
+<body>
+
+<!-- Alarm overlay -->
+<div id="alarm-overlay"></div>
+
+<!-- Popup message -->
+<div id="popup"></div>
+
+<!-- ══ JACKPOT HUD ══ -->
+<div id="jackpot-hud">
+  <div class="jp-tier" id="jp-mini">
+    <span class="jp-label">Mini</span>
+    <span class="jp-value" id="jp-mini-val">$10</span>
+  </div>
+  <div class="jp-tier" id="jp-minor">
+    <span class="jp-label">Minor</span>
+    <span class="jp-value" id="jp-minor-val">$25</span>
+  </div>
+  <div class="jp-tier" id="jp-major">
+    <span class="jp-label">Major</span>
+    <span class="jp-value" id="jp-major-val">$100</span>
+  </div>
+  <div class="jp-tier" id="jp-grand">
+    <span class="jp-label">Grand</span>
+    <span class="jp-value" id="jp-grand-val">$500</span>
+  </div>
+  <div class="jp-tier ultra" id="jp-ultra">
+    <span class="jp-label">◆ Ultra Black</span>
+    <span class="jp-value" id="jp-ultra-val">$1,000+</span>
+  </div>
+</div>
+
+<!-- ══ MAIN GAME ══ -->
+<div id="game-wrap">
+  <div>
+    <div class="game-title">JackpotVaultRaid</div>
+    <div class="game-subtitle">Crack the Vault · Break Deeper · Risk Bigger</div>
+  </div>
+
+  <!-- Breach Meter -->
+  <div class="breach-wrap">
+    <span class="breach-label">Vault Breach</span>
+    <div class="breach-bar-bg">
+      <div class="breach-bar-fill" id="breach-fill"></div>
+    </div>
+    <span class="breach-pct" id="breach-pct">0%</span>
+  </div>
+
+  <!-- Slot Machine -->
+  <div id="slot-machine">
+    <div class="bolt tl"></div><div class="bolt tr"></div>
+    <div class="bolt bl"></div><div class="bolt br"></div>
+
+    <div id="reel-area" style="position:relative">
+      <div class="reel" id="reel-0">
+        <div class="reel-cell" data-r="0" data-c="0">💰</div>
+        <div class="reel-cell" data-r="1" data-c="0">💎</div>
+        <div class="reel-cell" data-r="2" data-c="0">🔑</div>
+      </div>
+      <div class="reel" id="reel-1">
+        <div class="reel-cell" data-r="0" data-c="1">🔐</div>
+        <div class="reel-cell" data-r="1" data-c="1">💰</div>
+        <div class="reel-cell" data-r="2" data-c="1">💎</div>
+      </div>
+      <div class="reel" id="reel-2">
+        <div class="reel-cell" data-r="0" data-c="2">💎</div>
+        <div class="reel-cell" data-r="1" data-c="2">🔑</div>
+        <div class="reel-cell" data-r="2" data-c="2">💰</div>
+      </div>
+      <div class="reel" id="reel-3">
+        <div class="reel-cell" data-r="0" data-c="3">💰</div>
+        <div class="reel-cell" data-r="1" data-c="3">🔐</div>
+        <div class="reel-cell" data-r="2" data-c="3">💎</div>
+      </div>
+      <div class="reel" id="reel-4">
+        <div class="reel-cell" data-r="0" data-c="4">🔑</div>
+        <div class="reel-cell" data-r="1" data-c="4">💰</div>
+        <div class="reel-cell" data-r="2" data-c="4">🔐</div>
+      </div>
+    </div>
+
+    <div id="win-display">— SPIN TO CRACK THE VAULT —</div>
+
+    <!-- Control Panel -->
+    <div id="control-panel">
+      <div class="ctrl-left">
+        <div class="ctrl-group">
+          <span class="ctrl-label">BET</span>
+          <button class="btn-sm" onclick="changeBet(-1)">−</button>
+          <div class="ctrl-val" id="bet-val">$1</div>
+          <button class="btn-sm" onclick="changeBet(1)">+</button>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">LINES</span>
+          <div class="ctrl-val">20</div>
+        </div>
+      </div>
+
+      <button id="spin-btn" onclick="doSpin()">
+        SPIN
+        <span class="spin-sub">PRESS TO RAID</span>
+      </button>
+
+      <div class="ctrl-right">
+        <div class="ctrl-group">
+          <span class="ctrl-label">AUTO</span>
+          <button class="btn-sm" id="auto-btn" onclick="toggleAuto()">OFF</button>
+          <select class="btn-sm" id="auto-count" style="padding:5px 6px;">
+            <option>10</option><option>25</option><option>50</option><option>100</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">TURBO</span>
+          <div class="toggle" id="turbo-toggle" onclick="toggleTurbo()"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Balance Bar -->
+  <div id="balance-bar">
+    <div class="bal-item">
+      <span class="bal-label">Balance</span>
+      <span class="bal-val" id="balance-val">$1,000</span>
+    </div>
+    <div class="bal-item">
+      <span class="bal-label">Total Bet</span>
+      <span class="bal-val" id="total-bet-val">$20</span>
+    </div>
+    <div class="bal-item">
+      <span class="bal-label">Last Win</span>
+      <span class="bal-val" id="win-val">$0</span>
+    </div>
+    <div class="bal-item">
+      <span class="bal-label">Bonus Won</span>
+      <span class="bal-val" id="bonus-total-val" style="color:var(--electric);">$0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VAULT DOOR CINEMATIC ══ -->
+<div id="vault-overlay">
+  <div id="vault-door-wrap">
+    <div class="vault-outer">
+      <div class="vault-inner-ring">
+        <div class="vault-spokes" id="vault-spokes"></div>
+        <div class="vault-handle"></div>
+      </div>
+    </div>
+    <div class="vault-glow-reveal"></div>
+  </div>
+  <div id="vault-opening-text">VAULT BREACHED</div>
+  <div id="vault-sub-text">Lock & Link Bonus Activated</div>
+</div>
+
+<!-- ══ BONUS BOARD ══ -->
+<div id="bonus-overlay">
+  <div class="bonus-hud">
+    <div class="vault-level-badge level-bronze" id="vault-level-text">BRONZE VAULT</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div class="respin-display">RESPINS: <span id="respin-count">3</span></div>
+      <div class="key-tracker">
+        <span class="key-label">🔑 Keys:</span>
+        <div class="key-pip" id="k0"></div>
+        <div class="key-pip" id="k1"></div>
+        <div class="key-pip" id="k2"></div>
+      </div>
+    </div>
+    <div class="bonus-winnings">+<span id="bonus-win-display">$0</span></div>
+  </div>
+
+  <div id="bonus-board"></div>
+
+  <div id="bonus-actions">
+    <button class="btn-cashout" onclick="bonusCashOut()">💰 CASH OUT</button>
+    <button class="btn-risk" id="risk-btn" onclick="bonusRiskNext()" disabled>⚡ RISK NEXT LEVEL</button>
+  </div>
+
+  <div style="margin-top:12px;font-size:11px;letter-spacing:2px;color:var(--dim);text-align:center" id="bonus-msg">
+    CLICK TILES TO REVEAL — COLLECT 3 KEYS TO RISK NEXT LEVEL
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════
+const SYMBOLS = ['💰','💎','🔑','🔐','⭐','🏆','🃏','💣'];
+const SYM_WEIGHTS = [28,18,12,14,10,8,6,4]; // probability weights
+
+const BETS = [0.5,1,2,5,10,25,50];
+let betIdx = 1;
+const LINES = 20;
+
+let balance = 1000;
+let lastWin = 0;
+let totalBonusWon = 0;
+let breachPct = 0;
+let isSpinning = false;
+let autoOn = false;
+let autoRemaining = 0;
+let turboOn = false;
+let autoTimer = null;
+
+// Bonus state
+let inBonus = false;
+let vaultLevel = 0; // 0=bronze 1=silver 2=gold 3=diamond 4=black
+let bonusRespins = 3;
+let bonusWin = 0;
+let keysCollected = 0;
+let boardData = [];
+let bonusPrevWin = 0; // win before advancing level
+const VAULT_NAMES = ['BRONZE VAULT','SILVER VAULT','GOLD VAULT','DIAMOND VAULT','BLACK VAULT'];
+const VAULT_CLASSES = ['level-bronze','level-silver','level-gold','level-diamond','level-black'];
+const MULTIPLIER_ODDS = [0.10,0.15,0.20,0.30,0.40];
+const BOMB_ODDS = [0.05,0.08,0.12,0.18,0.25];
+
+// Payline win table (multipliers of bet)
+const PAYTABLE = {
+  '🏆': [0,0,10,50,200,1000],
+  '💎': [0,0,5,15,60,200],
+  '🔑': [0,0,4,12,40,120],
+  '⭐': [0,0,3,8,25,80],
+  '💰': [0,0,2,6,15,40],
+  '🔐': [0,0,2,5,12,30],
+  '🃏': [0,0,1,4,10,20],
+};
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function weightedRandom(items, weights) {
+  const total = weights.reduce((a,b) => a+b, 0);
+  let r = Math.random() * total;
+  for (let i=0; i<items.length; i++) { r -= weights[i]; if (r <= 0) return items[i]; }
+  return items[items.length-1];
+}
+
+function fmt(n) {
+  if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'k';
+  return '$' + n.toFixed(n % 1 === 0 ? 0 : 2);
+}
+
+function updateUI() {
+  document.getElementById('balance-val').textContent = fmt(balance);
+  document.getElementById('win-val').textContent = fmt(lastWin);
+  document.getElementById('bonus-total-val').textContent = fmt(totalBonusWon);
+  const totalBet = BETS[betIdx] * LINES;
+  document.getElementById('total-bet-val').textContent = fmt(totalBet);
+  document.getElementById('bet-val').textContent = '$' + BETS[betIdx];
+}
+
+function setBreach(pct) {
+  breachPct = Math.min(100, pct);
+  document.getElementById('breach-fill').style.width = breachPct + '%';
+  document.getElementById('breach-pct').textContent = Math.round(breachPct) + '%';
+}
+
+function showPopup(text, cls) {
+  const el = document.getElementById('popup');
+  el.className = '';
+  el.innerHTML = `<div class="${cls}">${text}</div>`;
+  void el.offsetWidth;
+  el.className = 'show';
+}
+
+function spawnParticles(x, y, color, count=12) {
+  for (let i=0; i<count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 4 + Math.random()*6;
+    p.style.cssText = `width:${size}px;height:${size}px;background:${color};left:${x}px;top:${y}px;
+      --tx:${(Math.random()-0.5)*200}px;--ty:${(Math.random()-1)*180}px;
+      animation-duration:${0.8+Math.random()*0.8}s;animation-delay:${Math.random()*0.1}s;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1600);
+  }
+}
+
+function shakeScreen() {
+  document.body.classList.remove('shake');
+  void document.body.offsetWidth;
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 500);
+}
+
+// ══════════════════════════════════════
+// REEL ENGINE
+// ══════════════════════════════════════
+function generateGrid() {
+  const grid = [];
+  for (let row=0; row<3; row++) {
+    grid[row] = [];
+    for (let col=0; col<5; col++) {
+      grid[row][col] = weightedRandom(SYMBOLS, SYM_WEIGHTS);
+    }
+  }
+  return grid;
+}
+
+function displayGrid(grid) {
+  for (let row=0; row<3; row++) {
+    for (let col=0; col<5; col++) {
+      const cell = document.querySelector(`.reel-cell[data-r="${row}"][data-c="${col}"]`);
+      if (cell) {
+        cell.textContent = grid[row][col];
+        cell.classList.remove('win','spinning');
+      }
+    }
+  }
+}
+
+function evaluateGrid(grid) {
+  let totalWin = 0;
+  const bet = BETS[betIdx];
+  const winCells = new Set();
+
+  // Check middle row (main payline), top row, bottom row
+  for (let row=0; row<3; row++) {
+    const rowSyms = grid[row];
+    // Count consecutive from left
+    let sym = rowSyms[0];
+    let count = 1;
+    for (let c=1; c<5; c++) {
+      if (rowSyms[c] === sym) count++;
+      else break;
+    }
+    if (sym !== '💣' && PAYTABLE[sym] && count >= 3) {
+      const mult = PAYTABLE[sym][count];
+      totalWin += bet * mult;
+      for (let c=0; c<count; c++) winCells.add(`${row}-${c}`);
+    }
+  }
+
+  // Count scatter keys
+  let keyCount = 0, linkCount = 0;
+  for (let row=0; row<3; row++) for (let col=0; col<5; col++) {
+    if (grid[row][col] === '🔑') keyCount++;
+    if (grid[row][col] === '🔐') linkCount++;
+  }
+
+  const triggerBonus = keyCount >= 3 || linkCount >= 6;
+
+  // Highlight wins
+  winCells.forEach(k => {
+    const [r,c] = k.split('-');
+    const cell = document.querySelector(`.reel-cell[data-r="${r}"][data-c="${c}"]`);
+    if (cell) cell.classList.add('win');
+  });
+
+  return { totalWin, triggerBonus, keyCount, linkCount };
+}
+
+// ══════════════════════════════════════
+// SPIN
+// ══════════════════════════════════════
+async function doSpin() {
+  if (isSpinning || inBonus) return;
+  const totalBet = BETS[betIdx] * LINES;
+  if (balance < totalBet) { showPopup('INSUFFICIENT FUNDS', 'popup-red'); return; }
+
+  isSpinning = true;
+  balance -= totalBet;
+  lastWin = 0;
+  updateUI();
+  document.getElementById('spin-btn').disabled = true;
+
+  // Clear wins
+  document.querySelectorAll('.reel-cell').forEach(c => c.classList.remove('win'));
+  document.getElementById('win-display').classList.remove('show');
+  document.getElementById('win-display').textContent = '';
+
+  // Spinning animation
+  const spinDur = turboOn ? 300 : 800;
+  document.querySelectorAll('.reel-cell').forEach(c => c.classList.add('spinning'));
+  await sleep(spinDur);
+
+  // Generate and display result
+  const grid = generateGrid();
+  document.querySelectorAll('.reel-cell').forEach(c => c.classList.remove('spinning'));
+  displayGrid(grid);
+
+  const { totalWin, triggerBonus, keyCount } = evaluateGrid(grid);
+
+  // Update breach meter
+  const breachIncrease = 8 + keyCount * 5 + (totalWin > 0 ? 6 : 0);
+  setBreach(breachPct + breachIncrease);
+
+  if (totalWin > 0) {
+    balance += totalWin;
+    lastWin = totalWin;
+    updateUI();
+    const wd = document.getElementById('win-display');
+    wd.textContent = `WIN! ${fmt(totalWin)}`;
+    wd.classList.add('show');
+    shakeScreen();
+    const rect = document.getElementById('reel-area').getBoundingClientRect();
+    spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#c9a227', 16);
+
+    if (totalWin >= BETS[betIdx] * 50) showPopup('BIG WIN!', 'popup-gold');
+    else if (totalWin >= BETS[betIdx] * 20) showPopup('GREAT WIN!', 'popup-gold');
+  }
+
+  // Check guaranteed bonus from full breach
+  const forcedBonus = breachPct >= 100;
+  if (forcedBonus) setBreach(0);
+
+  if (triggerBonus || forcedBonus) {
+    await sleep(turboOn ? 200 : 600);
+    await triggerBonusSequence();
+  } else {
+    isSpinning = false;
+    document.getElementById('spin-btn').disabled = false;
+    if (autoOn && autoRemaining > 0) {
+      autoRemaining--;
+      if (autoRemaining <= 0) { autoOn = false; document.getElementById('auto-btn').textContent = 'OFF'; document.getElementById('auto-btn').classList.remove('active'); }
+      else { autoTimer = setTimeout(doSpin, turboOn ? 400 : 1200); }
+    }
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════
+// BONUS TRIGGER
+// ══════════════════════════════════════
+async function triggerBonusSequence() {
+  // Alarm
+  const alarm = document.getElementById('alarm-overlay');
+  alarm.classList.add('alarm-on');
+  shakeScreen();
+  showPopup('VAULT BREACH!', 'popup-blue');
+  await sleep(turboOn ? 200 : 1000);
+  alarm.classList.remove('alarm-on');
+
+  if (!turboOn) {
+    // Show vault cinematic
+    document.getElementById('vault-overlay').classList.add('show');
+    await sleep(3000);
+    document.getElementById('vault-overlay').classList.remove('show');
+  }
+
+  // Start bonus
+  startBonus();
+}
+
+// ══════════════════════════════════════
+// BONUS BOARD
+// ══════════════════════════════════════
+function startBonus(advancing = false) {
+  inBonus = true;
+  bonusRespins = 3;
+  keysCollected = 0;
+  if (!advancing) { vaultLevel = 0; bonusWin = 0; bonusPrevWin = 0; }
+  else { bonusPrevWin = bonusWin; }
+  boardData = generateBoardData();
+  renderBonusBoard();
+  updateBonusUI();
+  document.getElementById('bonus-overlay').classList.add('show');
+  document.getElementById('risk-btn').disabled = true;
+  document.getElementById('bonus-msg').textContent = 'CLICK TILES TO REVEAL — COLLECT 3 KEYS TO RISK NEXT LEVEL';
+}
+
+function generateBoardData() {
+  const levelMultOdds = MULTIPLIER_ODDS[vaultLevel];
+  const levelBombOdds = BOMB_ODDS[vaultLevel];
+  const cells = [];
+  const COLS = 5, ROWS = 4;
+  for (let i=0; i<COLS*ROWS; i++) {
+    const r = Math.random();
+    let type, value;
+    const baseBet = BETS[betIdx] * LINES;
+    const levelMult = (vaultLevel + 1);
+
+    if (r < levelBombOdds) {
+      type = 'bomb'; value = '💣';
+    } else if (r < levelBombOdds + 0.04) {
+      type = 'jackpot';
+      const jp = ['MINI','MINOR','MAJOR','GRAND','ULTRA'][Math.min(vaultLevel,4)];
+      value = jp;
+    } else if (r < levelBombOdds + 0.04 + 0.12) {
+      type = 'key-cell'; value = '🔑';
+    } else if (r < levelBombOdds + 0.04 + 0.12 + levelMultOdds) {
+      type = 'multiplier';
+      const mults = [2,3,5,10,20,50];
+      const m = mults[Math.floor(Math.random() * Math.min(3+vaultLevel, mults.length))];
+      value = `×${m}`;
+    } else {
+      type = 'cash';
+      const amt = baseBet * levelMult * (0.5 + Math.random() * 3);
+      value = fmt(amt);
+    }
+    cells.push({ type, value, revealed: false });
+  }
+  return cells;
+}
+
+function renderBonusBoard() {
+  const board = document.getElementById('bonus-board');
+  board.innerHTML = '';
+  boardData.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = 'board-cell' + (cell.revealed ? ' revealed ' + cell.type : '');
+    div.dataset.idx = i;
+
+    if (cell.revealed) {
+      const icon = {
+        cash: '💰', multiplier: '⚡', 'key-cell': '🔑',
+        bomb: '💣', jackpot: '🏆'
+      }[cell.type] || '?';
+      div.innerHTML = `<span class="cell-icon">${icon}</span><span class="cell-val">${cell.value}</span>`;
+    } else {
+      div.innerHTML = `<span class="hidden-mark">🔒</span>`;
+      div.addEventListener('click', () => revealCell(i));
+    }
+    board.appendChild(div);
+  });
+}
+
+function revealCell(idx) {
+  if (boardData[idx].revealed || bonusRespins <= 0) return;
+  const cell = boardData[idx];
+  cell.revealed = true;
+
+  if (cell.type === 'bomb') {
+    handleBomb(idx);
+    return;
+  }
+
+  bonusRespins = 3; // reset respins
+
+  const baseBet = BETS[betIdx] * LINES;
+  if (cell.type === 'cash') {
+    const amt = parseFloat(cell.value.replace(/[\$k]/g, '')) * (cell.value.includes('k') ? 1000 : 1);
+    bonusWin += amt;
+    spawnParticles(event.clientX, event.clientY, '#39ff7a', 10);
+  } else if (cell.type === 'multiplier') {
+    const m = parseInt(cell.value.replace('×',''));
+    bonusWin *= m;
+    spawnParticles(event.clientX, event.clientY, '#c9a227', 12);
+    showPopup(`×${m} MULTIPLIER!`, 'popup-gold');
+    shakeScreen();
+  } else if (cell.type === 'key-cell') {
+    keysCollected++;
+    updateKeyPips();
+    spawnParticles(event.clientX, event.clientY, '#40a0ff', 10);
+    if (keysCollected >= 3 && vaultLevel < 4) {
+      document.getElementById('risk-btn').disabled = false;
+      document.getElementById('bonus-msg').textContent = '🔑 3 KEYS COLLECTED — ADVANCE TO NEXT VAULT?';
+    }
+  } else if (cell.type === 'jackpot') {
+    handleJackpot(cell.value, idx);
+  }
+
+  renderBonusBoard();
+  updateBonusUI();
+  checkBonusEnd();
+}
+
+function handleBomb(idx) {
+  shakeScreen();
+  document.getElementById('alarm-overlay').classList.add('alarm-on');
+  showPopup('💣 BOMB!', 'popup-red');
+  setTimeout(() => document.getElementById('alarm-overlay').classList.remove('alarm-on'), 800);
+
+  // Reveal bomb, lose current level winnings but keep previous secured amount
+  const lostAmt = bonusWin - bonusPrevWin;
+  bonusWin = bonusPrevWin;
+
+  renderBonusBoard();
+  document.getElementById('bonus-msg').textContent = `💣 BOMB! Lost ${fmt(lostAmt)} — Secured: ${fmt(bonusWin)}`;
+  document.getElementById('risk-btn').disabled = true;
+
+  setTimeout(() => endBonus(), 2000);
+}
+
+function handleJackpot(tier, idx) {
+  const jp = {
+    'MINI': BETS[betIdx]*10, 'MINOR': BETS[betIdx]*25,
+    'MAJOR': BETS[betIdx]*100, 'GRAND': BETS[betIdx]*500, 'ULTRA': BETS[betIdx]*1000
+  };
+  const amt = jp[tier] || BETS[betIdx]*10;
+  bonusWin += amt;
+  shakeScreen();
+  spawnParticles(event ? event.clientX : window.innerWidth/2, event ? event.clientY : 300, '#cc44ff', 20);
+  showPopup(`🏆 ${tier} JACKPOT!\n${fmt(amt)}`, 'popup-blue');
+  document.getElementById('bonus-overlay').classList.add('jackpot-win');
+  setTimeout(() => document.getElementById('bonus-overlay').classList.remove('jackpot-win'), 2500);
+
+  // Highlight jackpot HUD
+  const hudMap = {MINI:'jp-mini',MINOR:'jp-minor',MAJOR:'jp-major',GRAND:'jp-grand',ULTRA:'jp-ultra'};
+  const hudEl = document.getElementById(hudMap[tier]);
+  if (hudEl) { hudEl.classList.add('active'); setTimeout(() => hudEl.classList.remove('active'), 3000); }
+}
+
+function updateKeyPips() {
+  for (let i=0; i<3; i++) {
+    const pip = document.getElementById('k'+i);
+    if (pip) {
+      pip.classList.toggle('filled', i < keysCollected);
+      pip.textContent = i < keysCollected ? '🔑' : '';
+    }
+  }
+}
+
+function updateBonusUI() {
+  document.getElementById('respin-count').textContent = bonusRespins;
+  document.getElementById('bonus-win-display').textContent = fmt(bonusWin);
+  const lvlEl = document.getElementById('vault-level-text');
+  lvlEl.textContent = VAULT_NAMES[vaultLevel];
+  lvlEl.className = 'vault-level-badge ' + VAULT_CLASSES[vaultLevel];
+}
+
+function checkBonusEnd() {
+  const unrevealed = boardData.filter(c => !c.revealed).length;
+  if (unrevealed === 0 || bonusRespins <= 0) {
+    // If no more auto-respins possible
+    if (unrevealed > 0) {
+      // decrement respins on no-reveal? Actually respins go down only with respun board
+      // In this impl, respins reset on each collect; end when all revealed
+    }
+    if (unrevealed === 0) endBonus();
+  }
+}
+
+function bonusCashOut() {
+  endBonus();
+}
+
+function bonusRiskNext() {
+  if (vaultLevel >= 4) { endBonus(); return; }
+  vaultLevel++;
+  keysCollected = 0;
+  showPopup('VAULT ADVANCED!', 'popup-blue');
+  updateKeyPips();
+  document.getElementById('vault-level-text').classList.add('level-up-anim');
+  setTimeout(() => document.getElementById('vault-level-text').classList.remove('level-up-anim'), 1500);
+  startBonus(true);
+}
+
+function endBonus() {
+  balance += bonusWin;
+  totalBonusWon += bonusWin;
+  lastWin = bonusWin;
+  updateUI();
+
+  const wd = document.getElementById('win-display');
+  wd.textContent = `BONUS WIN! ${fmt(bonusWin)}`;
+  wd.classList.add('show');
+
+  document.getElementById('bonus-overlay').classList.remove('show');
+  inBonus = false;
+  isSpinning = false;
+  document.getElementById('spin-btn').disabled = false;
+
+  showPopup(`BONUS: +${fmt(bonusWin)}`, 'popup-gold');
+  shakeScreen();
+  spawnParticles(window.innerWidth/2, window.innerHeight/2, '#c9a227', 24);
+}
+
+// ══════════════════════════════════════
+// CONTROLS
+// ══════════════════════════════════════
+function changeBet(dir) {
+  betIdx = Math.max(0, Math.min(BETS.length-1, betIdx+dir));
+  updateUI();
+}
+
+function toggleAuto() {
+  autoOn = !autoOn;
+  const btn = document.getElementById('auto-btn');
+  if (autoOn) {
+    autoRemaining = parseInt(document.getElementById('auto-count').value);
+    btn.textContent = 'ON';
+    btn.classList.add('active');
+    doSpin();
+  } else {
+    btn.textContent = 'OFF';
+    btn.classList.remove('active');
+    clearTimeout(autoTimer);
+    autoRemaining = 0;
+  }
+}
+
+function toggleTurbo() {
+  turboOn = !turboOn;
+  document.getElementById('turbo-toggle').classList.toggle('on', turboOn);
+}
+
+// ══════════════════════════════════════
+// VAULT SPOKES INIT
+// ══════════════════════════════════════
+function initVault() {
+  const spokes = document.getElementById('vault-spokes');
+  for (let i=0; i<8; i++) {
+    const s = document.createElement('div');
+    s.className = 'vault-spoke';
+    s.style.transform = `rotate(${i*45}deg)`;
+    spokes.appendChild(s);
+  }
+}
+
+// Jackpot HUD values
+function updateJackpotHud() {
+  const bet = BETS[betIdx] * LINES;
+  document.getElementById('jp-mini-val').textContent = fmt(bet*10);
+  document.getElementById('jp-minor-val').textContent = fmt(bet*25);
+  document.getElementById('jp-major-val').textContent = fmt(bet*100);
+  document.getElementById('jp-grand-val').textContent = fmt(bet*500);
+  document.getElementById('jp-ultra-val').textContent = fmt(bet*1000)+'+';
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+initVault();
+updateUI();
+updateJackpotHud();
+
+// Update jackpot HUD when bet changes
+const origChangeBet = changeBet;
+window.changeBet = function(dir) { origChangeBet(dir); updateJackpotHud(); };
+
+// Initial win display
+document.getElementById('win-display').classList.add('show');
+</script>
+</body>
+</html>
